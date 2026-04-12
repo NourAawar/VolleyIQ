@@ -1,7 +1,20 @@
-<h2>Login</h2>
+{% extends 'tournaments/base.html' %}
 
-<form method="post">
-    {% csrf_token %}
-    {{ form.as_p }}
-    <button type="submit">Login</button>
-</form>
+{% block title %}Login{% endblock %}
+
+{% block content %}
+<div class="card auth-box">
+    <h2>Login</h2>
+    <p class="small-text">Sign in to access your role-specific features.</p>
+
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Login</button>
+            <a href="/" class="btn btn-outline">Back Home</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

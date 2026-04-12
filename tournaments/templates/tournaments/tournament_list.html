@@ -1,15 +1,40 @@
-<h2>Tournament List</h2>
+{% extends 'tournaments/base.html' %}
 
-<ul>
-    {% for tournament in tournaments %}
-        <li>
-            {{ tournament.name }} | {{ tournament.start_date }} | {{ tournament.end_date }} | {{ tournament.format }}
-        </li>
-    {% empty %}
-        <li>No tournaments yet.</li>
-    {% endfor %}
-</ul>
+{% block title %}Tournament List{% endblock %}
 
-<br>
-<a href="/create/">Create Another Tournament</a><br>
-<a href="/">Back Home</a>
+{% block content %}
+<div class="card table-card">
+    <h2>Tournament List</h2>
+    <p class="small-text">All tournaments currently stored in the system.</p>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Start Date</th>
+                <th>End Date</th>
+                <th>Format</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for tournament in tournaments %}
+                <tr>
+                    <td>{{ tournament.name }}</td>
+                    <td>{{ tournament.start_date }}</td>
+                    <td>{{ tournament.end_date }}</td>
+                    <td><span class="badge">{{ tournament.format }}</span></td>
+                </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="4">No tournaments yet.</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="form-actions">
+        <a href="/create/" class="btn btn-accent">Create Another Tournament</a>
+        <a href="/" class="btn btn-outline">Back Home</a>
+    </div>
+</div>
+{% endblock %}
