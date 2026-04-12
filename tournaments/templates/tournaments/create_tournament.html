@@ -1,0 +1,10 @@
+<h2>Create Tournament</h2>
+
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Save Tournament</button>
+</form>
+
+<br>
+<a href="/">Back Home</a>

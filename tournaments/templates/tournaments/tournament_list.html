@@ -1,0 +1,15 @@
+<h2>Tournament List</h2>
+
+<ul>
+    {% for tournament in tournaments %}
+        <li>
+            {{ tournament.name }} | {{ tournament.start_date }} | {{ tournament.end_date }} | {{ tournament.format }}
+        </li>
+    {% empty %}
+        <li>No tournaments yet.</li>
+    {% endfor %}
+</ul>
+
+<br>
+<a href="/create/">Create Another Tournament</a><br>
+<a href="/">Back Home</a>
