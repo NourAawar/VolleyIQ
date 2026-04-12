@@ -5,10 +5,7 @@
 {% block content %}
 <div class="card hero">
     <h2>VolleyIQ Tournament System</h2>
-    <p>
-        Manage volleyball tournaments with role-based access for club managers,
-        coaches, and players.
-    </p>
+    <p>Manage volleyball tournaments with role-based access.</p>
 
     {% if user.is_authenticated %}
         <p><strong>Welcome, {{ user.username }}!</strong></p>
@@ -25,7 +22,10 @@
         <div class="actions" style="margin-top: 24px;">
             <a class="btn btn-accent" href="/create/">Create Tournament</a>
             <a class="btn btn-primary" href="/list/">View Tournaments</a>
-            <a class="btn btn-outline" href="/accounts/logout/">Logout</a>
+            <form action="/accounts/logout/" method="post" style="display:inline;">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-outline">Logout</button>
+            </form>
         </div>
     {% else %}
         <div class="actions">
