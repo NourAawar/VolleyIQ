@@ -71,3 +71,17 @@ class AddPlayerForm(forms.ModelForm):
             
         self.fields['position'].required = False 
         self.fields['jersey_number'].required = False 
+
+class RegisterTeamForm(forms.Form): 
+    team = forms.ModelChoiceField(
+        queryset = Team.objects.none(), 
+        empty_label = '- Select a team -', 
+        widget = forms.Select(), 
+    )
+
+    def __init__(self, *args, tournament = None, **kwargs): 
+        super().__init__(*args, **kwargs)
+
+        if tournament: 
+            already_registered = tournament.teams.values_list('id', flat = True)
+            self.fields['team'].queryset = Team.objects.exclude(id__in = already_registered)

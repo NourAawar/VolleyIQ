@@ -1,0 +1,61 @@
+{% extends 'tournaments/base.html' %}
+
+{% block title %}{{ tournament.name }} | VolleyIQ{% endblock %}
+
+{% block content %}
+<div class = "card" style = "margin-bottom:24px;">
+    <h2 style = "margin-top:0;">{{tournament.name}}</h2>
+
+    <div class = "role-box">
+        <strong>Format:</strong>
+        <span class = "badge">{{tournament_format_display}}</span>
+        &nbsp; 
+        <strong>Dates:</strong>
+        {{tournament.start_date}} → {{tournament.end_date}}
+    </div>
+
+    {% for group in user.groups.all %}
+        {% if group.name == 'Club Manager' %}
+            <div class = "form-actions" style = "margin-top:20px;">
+                <a href = "/tournaments/{{tournament.id}}/register-team/" class = "btn btn-accent">
+                    Register Team
+                </a>
+            </div>
+        {% endif %}
+    {% endfor %}
+</div>
+
+<div class = "card table-card">
+    <h2>Registered Teams</h2>
+    <p class = "small-text">Teams participating in this tournament.</p>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Team</th>
+                <th>Coach</th>
+                <th>Players</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for team in registered_teams %}
+                <tr>
+                    <td><a href = "/teams/{{team.id}}/">{{team.name}}</a></td>
+                    <td>{{team.coach.get_full_name|default:team.coach.username|default:"-"}}</td>
+                    <td>{{team.memberships.count}}</td>
+                </tr>
+            {% empty %}
+                <tr>
+                    <td colspan = "3">No teams registered yet.</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div class = "form-actions" style = "margin-top:20px;">
+    <a href = "/list/" class = "btn btn-outline">
+        Back to Tournaments
+    </a>
+</div>
+{% endblock %}

@@ -12,6 +12,11 @@ class Tournament(models.Model):
     start_date = models.DateField()
     end_date = models.DateField()
     format = models.CharField(max_length=50, choices=FORMAT_CHOICES)
+    teams = models.ManyToManyField(
+        'Team', 
+        blank = True, 
+        related_name = 'tournaments', 
+    )
 
     def __str__(self):
         return self.name

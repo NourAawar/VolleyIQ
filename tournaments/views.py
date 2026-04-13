@@ -1,7 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponseForbidden
-from .forms import TournamentForm, TeamForm, AssignCoachForm, AddPlayerForm
+from .forms import TournamentForm, TeamForm, AssignCoachForm, AddPlayerForm, RegisterTeamForm
 from .models import Tournament, Team, TeamMembership
 
 def is_club_manager(user): 
@@ -29,6 +29,39 @@ def create_tournament(request):
 def tournament_list(request):
     tournaments = Tournament.objects.all()
     return render(request, 'tournaments/tournament_list.html', {'tournaments': tournaments})
+
+@login_required 
+def tournament_detail(request, tournament_id):
+    tournament = get_object_or_404(Tournament, id = tournament_id)
+    registered_teams = tournament.teams.select_related('coach')
+
+    return render(request, 'tournaments/tournament_detail.html', {
+        'tournament': tournament, 
+        'registered_teams': registered_teams,
+    })
+
+@login_required
+def register_team(request, tournament_id): 
+    if not is_club_manager(request.user): 
+        return HttpResponseForbidden("Only Club Managers can register teams.")
+    
+    tournament = get_object_or_404(Tournament, id = tournament_id)
+
+    if request.method == 'POST': 
+        form = RegisterTeamForm(request.POST, tournament = tournament)
+        if form.is_valid(): 
+            team = form.cleaned_data['team']
+            tournament.teams.add(team)
+
+            return redirect('tournament_detail', tournament_id = tournament.id)
+    
+    else: 
+        form = RegisterTeamForm(tournament = tournament)
+    
+    return render(request, 'tournaments/register_team.html', {
+        'form': form, 
+        'tournament': tournament, 
+    })
 
 @login_required 
 def team_list(request): 

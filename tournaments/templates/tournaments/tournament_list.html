@@ -14,6 +14,8 @@
                 <th>Start Date</th>
                 <th>End Date</th>
                 <th>Format</th>
+                <th>Teams</th>
+                <th>Details</th>
             </tr>
         </thead>
         <tbody>
@@ -22,7 +24,13 @@
                     <td>{{ tournament.name }}</td>
                     <td>{{ tournament.start_date }}</td>
                     <td>{{ tournament.end_date }}</td>
-                    <td><span class="badge">{{ tournament.format }}</span></td>
+                    <td><span class="badge">{{ tournament.get_format_display }}</span></td>
+                    <td>{{tournament.teams.count}}</td>
+                    <td>
+                        <a href = "/tournaments/{{tournament.id}}/" class = "btn btn-primary" style = "padding:6px 14px;font-size:0.88rem;">
+                            View 
+                        </a>
+                    </td>
                 </tr>
             {% empty %}
                 <tr>
@@ -33,8 +41,16 @@
     </table>
 
     <div class="form-actions">
-        <a href="/create/" class="btn btn-accent">Create Another Tournament</a>
-        <a href="/" class="btn btn-outline">Back Home</a>
+        {% for group in user.groups.all %}
+            {% if group.name == 'Club Manager' %}
+                <a href = "/create/" class = "btn btn-accent">
+                    Create Tournament
+                </a>
+            {% endif %}
+        {% endfor %}
+        <a href = "/" class = "btn btn-outline">
+            Back Home
+        </a>
     </div>
 </div>
 {% endblock %}

@@ -1,0 +1,24 @@
+{% extends 'tournaments/base.html' %}
+
+{% block title %}Register Team | VolleyIQ{% endblock %}
+
+{% block content %}
+<div class = "card form-card">
+    <h2>Register Team - {{tournament.name}}</h2>
+    <p class = "small-text">Select a team to register. Teams already in this tournament are not shown.</p>
+
+    <form method = "post">
+        {% csrf_token %}
+        {{form.as_p}}
+
+        <div class = "form-actions">
+            <button type = "submit" class = "btn btn-accent">
+                Register Team
+            </button>
+            <a href = "/tournaments/{{tournament.id}}/" class = "btn btn-outline">
+                Cancel
+            </a>
+        </div>
+    </form>
+</div>
+{% endblock %}
