@@ -1,6 +1,6 @@
 from django import forms
 from django.contrib.auth.models import User, Group
-from .models import Tournament, Team
+from .models import Tournament, Team, TeamMembership
 
 class TournamentForm(forms.ModelForm):
     class Meta:
@@ -41,4 +41,33 @@ class AssignCoachForm(forms.ModelForm):
         
         self.fields['coach'].required = False 
         self.fields['coach'].empty_label = '- Remove coach -'
-        
+
+class AddPlayerForm(forms.ModelForm): 
+    class Meta: 
+        model = TeamMembership
+        fields = ['player', 'position', 'jersey_number']
+        widgets = {
+            'player': forms.Select(), 
+            'position': forms.Select(), 
+            'jersey_number': forms.NumberInput(attrs = {'placeholder': 'Jersey number (optional)'}), 
+        }
+
+    def __init__(self, *args, team = None, **kwargs): 
+        super().__init__(*args, **kwargs)
+
+        try: 
+            player_group = Group.objects.get(name = 'Player')
+            already_added = []
+
+            if team: 
+                already_added = team.memberships.values_list('player_id', flat = True)
+                
+            self.fields['player'].queryset = User.objects.filter(
+                groups = player_group
+            ).exclude(id__in = already_added)
+            
+        except Group.DoesNotExist: 
+            self.fields['player'].queryset = User.objects.none()
+            
+        self.fields['position'].required = False 
+        self.fields['jersey_number'].required = False 

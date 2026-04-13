@@ -1,8 +1,8 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponseForbidden
-from .forms import TournamentForm, TeamForm, AssignCoachForm
-from .models import Tournament, Team
+from .forms import TournamentForm, TeamForm, AssignCoachForm, AddPlayerForm
+from .models import Tournament, Team, TeamMembership
 
 def is_club_manager(user): 
     return user.groups.filter(name = 'Club Manager').exists()
@@ -56,8 +56,9 @@ def create_team(request):
 @login_required 
 def team_detail(request, team_id): 
     team = get_object_or_404(Team, id = team_id)
+    memberships = team.memberships.select_related('player')
 
-    return render(request, 'tournaments/team_detail.html', {'team': team})
+    return render(request, 'tournaments/team_detail.html', {'team': team, 'memberships': memberships})
 
 @login_required 
 def assign_coach(request, team_id): 
@@ -77,3 +78,24 @@ def assign_coach(request, team_id):
         form = AssignCoachForm(instance = team)
         
     return render(request, 'tournaments/assign_coach.html', {'form': form, 'team': team})
+
+@login_required 
+def add_player(request, team_id): 
+    if not is_club_manager(request.user): 
+        return HttpResponseForbidden("Only Club Managers can add players.")
+    
+    team = get_object_or_404(Team, id = team_id)
+
+    if request.method == 'POST': 
+        form = AddPlayerForm(request.POST, team = team)
+        if form.is_valid(): 
+            membership = form.save(commit = False)
+            membership.team = team 
+            membership.save()
+
+            return redirect('team_detail', team_id = team.id)
+    
+    else: 
+        form = AddPlayerForm(team = team)
+
+    return render(request, 'tournaments/add_player.html', {'form': form, 'team': team})

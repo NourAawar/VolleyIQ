@@ -21,15 +21,51 @@
                 <a href = "/teams/{{team.id}}/assign-coach/" class = "btn btn-primary">
                     Assign / Change Coach
                 </a>
+                <a href = "/teams/{{team.id}}/add-player/" class = "btn btn-accent">
+                    Add Player
+                </a>
             </div>
         {% endif %}
     {% endfor %}
+</div>
+<div class = "card table-card">
+    <h2>Roster</h2>
+    <p class = "small-text">Players currently on this team.</p>
 
-    <div class = "form-actions" style = "margin-top:12px;">
-        <a href = "/teams/" class = "btn btn-outline">
-            Back to Teams
-        </a>
-    </div>
+    <table>
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Player</th>
+                <th>Position</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for m in memberships %}
+                <tr>
+                    <td>{{m.jersey_number|default:"-"}}</td>
+                    <td>{{m.player.get_full_name|default:m.player.username}}</td>
+                    <td>
+                        {% if m.position %}
+                            <span class = "badge">{{m.get_position_display}}</span>
+                        {% else %}
+                            <span style = "color:var(--muted)">-</span>
+                        {% endif %}
+                    </td>
+                </tr>
+            {% empty %}
+                <tr>
+                    <td colspan = "3">No players on this roster yet.</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div class = "form-actions" style = "margin-top:20px;">
+    <a href = "/teams/" class = "btn btn-outline">
+        Back to Teams
+    </a>
 </div>
 
 {% endblock %}

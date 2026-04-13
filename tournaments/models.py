@@ -30,3 +30,29 @@ class Team(models.Model):
 
     def __str__(self): 
         return self.name
+    
+class TeamMembership(models.Model): 
+    POSITION_CHOICES = [
+        ('setter', 'Setter'), 
+        ('outside_hitter', 'Outside Hitter'), 
+        ('opposite', 'Opposite Hitter'), 
+        ('middle_blocker', 'Middle Blocker'), 
+        ('libero', 'Libero'), 
+        ('defensive_specialist', 'Defensive Specialist'), 
+    ]
+
+    team = models.ForeignKey(Team, on_delete = models.CASCADE, related_name = 'memberships')
+    player = models.ForeignKey(
+        User, 
+        on_delete = models.CASCADE, 
+        related_name = 'team_memberships', 
+        limit_choices_to = {'groups__name': 'Player'}, 
+    )
+    position = models.CharField(max_length = 50, choices = POSITION_CHOICES, blank = True)
+    jersey_number = models.PositiveIntegerField(null = True, blank = True)
+
+    class Meta: 
+        unique_together = ('team', 'player')
+    
+    def __str__(self): 
+        return f"{self.player.username} → {self.team.name}"
