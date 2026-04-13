@@ -13,6 +13,7 @@
         <div>
             <a href="/">Home</a>
             <a href="/list/">Tournaments</a>
+            <a href="/teams/">Teams</a>
             {% if user.is_authenticated %}
                 <form action="/accounts/logout/" method="post" style="display:inline;">
                      {% csrf_token %}

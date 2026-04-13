@@ -1,0 +1,21 @@
+{% extends 'tournaments/base.html' %}
+
+{% block title %}Create Team | VolleyIQ{% endblock %}
+
+{% block content %}
+<div class = "card form-card">
+    <h2>Create Team</h2>
+    <p class = "small-text">Enter the team name below.</p>
+
+    <form method = "post">
+        {% csrf_token %}
+        {{form.as_p}}
+
+        <div class = "form-actions">
+            <button type = "submit" class = "btn btn-accent">Save Team</button>
+            <a href = "/teams/" class = "btn btn-outline">Cancel</a>
+        </div>
+    </form>
+</div>
+
+{% endblock %}

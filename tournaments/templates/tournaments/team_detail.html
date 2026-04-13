@@ -1,0 +1,15 @@
+{% extends 'tournaments/base.html' %}
+
+{% block title %}{{team.name}} | VolleyIQ{% endblock %}
+
+{% block content %}
+<div class = "card">
+    <h2 style = "margin-top:0;">{{team.name}}</h2>
+    <p class = "small-text">Team details will grow as more features are added.</p>
+
+    <div class = "form-actions" style = "margin-top:20px;">
+        <a href = "/teams/" class = "btn btn-outline">Back to Teams</a>
+    </div>
+</div>
+
+{% endblock %}
