@@ -1,4 +1,5 @@
 from django.db import models
+from django.contrib.auth.models import User
 
 class Tournament(models.Model):
     FORMAT_CHOICES = [
@@ -17,6 +18,15 @@ class Tournament(models.Model):
 
 class Team(models.Model): 
     name = models.CharField(max_length = 100)
+
+    coach = models.ForeignKey(
+        User, 
+        null = True, 
+        blank = True, 
+        on_delete = models.SET_NULL, 
+        related_name = 'coached_teams', 
+        limit_choices_to = {'groups__name': 'Coach'}, 
+    )
 
     def __str__(self): 
         return self.name

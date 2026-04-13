@@ -1,7 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponseForbidden
-from .forms import TournamentForm, TeamForm
+from .forms import TournamentForm, TeamForm, AssignCoachForm
 from .models import Tournament, Team
 
 def is_club_manager(user): 
@@ -58,3 +58,22 @@ def team_detail(request, team_id):
     team = get_object_or_404(Team, id = team_id)
 
     return render(request, 'tournaments/team_detail.html', {'team': team})
+
+@login_required 
+def assign_coach(request, team_id): 
+    if not is_club_manager(request.user): 
+        return HttpResponseForbidden("Only Club Managers can assign coaches.")
+    
+    team = get_object_or_404(Team, id = team_id)
+
+    if request.method == 'POST': 
+        form = AssignCoachForm(request.POST, instance = team)
+        if form.is_valid(): 
+            form.save()
+
+            return redirect('team_detail', team_id = team.id)
+        
+    else: 
+        form = AssignCoachForm(instance = team)
+        
+    return render(request, 'tournaments/assign_coach.html', {'form': form, 'team': team})
