@@ -64,6 +64,21 @@ def register_team(request, tournament_id):
     })
 
 @login_required 
+def remove_team(request, tournament_id, team_id): 
+    if not is_club_manager(request.user): 
+        return HttpResponseForbidden("Only Club Managers can remove teams.")
+    
+    tournament = get_object_or_404(Tournament, id = tournament_id)
+    team = get_object_or_404(Team, id = team_id)
+
+    if request.method == 'POST': 
+        tournament.teams.remove(team)
+
+        return redirect('tournament_detail', tournament_id = tournament.id)
+    
+    return render(request, 'tournaments/confirm_remove_team.html', {'tournament': tournament, 'team': team,})
+
+@login_required 
 def team_list(request): 
     teams = Team.objects.all()
 

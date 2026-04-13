@@ -1,0 +1,25 @@
+{% extends 'tournaments/base.html' %}
+
+{% block title %}Remove Team | VolleyIQ{% endblock %}
+
+{% block content %}
+<div class = "card form-card" style = "text-align:center;">
+    <h2>Remove Team from Tournament</h2>
+    <p>Are you sure you want to remove <strong>{{team.name}}</strong>
+        from <strong>{{tournament.name}}</strong>?
+    </p>
+    <p class = "small-text">This onlu unregisters the team - it will not delete the team itself.</p>
+
+    <form method = "post">
+        {% csrf_token %}
+        <div class = "form-actions" style = "justify-content:center;">
+            <button type = "submit" class = "btn btn-accent" style = "background:#c0392b;">
+                Yes, Remove
+            </button>
+            <a href = "/tournaments/{{tournament.id}}/" class = "btn btn-outline">
+                Cancel
+            </a>
+        </div>
+    </form>
+</div>
+{% endblock %}
