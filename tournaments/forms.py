@@ -1,6 +1,6 @@
 from django import forms
 from django.contrib.auth.models import User, Group
-from .models import Tournament, Team, TeamMembership
+from .models import Tournament, Team, TeamMembership, Match
 
 class TournamentForm(forms.ModelForm):
     class Meta:
@@ -85,3 +85,21 @@ class RegisterTeamForm(forms.Form):
         if tournament: 
             already_registered = tournament.teams.values_list('id', flat = True)
             self.fields['team'].queryset = Team.objects.exclude(id__in = already_registered)
+
+class EditMatchTimeForm(forms.ModelForm):
+    class Meta:
+        model = Match
+        fields = ['match_date', 'match_time']
+        widgets = {
+            'match_date': forms.DateInput(attrs={'type': 'date'}),
+            'match_time': forms.TimeInput(attrs={'type': 'time'}),
+        }
+
+
+class UpdateMatchVenueForm(forms.ModelForm):
+    class Meta:
+        model = Match
+        fields = ['venue']
+        widgets = {
+            'venue': forms.TextInput(attrs={'placeholder': 'Enter new venue'}),
+        }

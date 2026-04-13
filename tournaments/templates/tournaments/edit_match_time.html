@@ -1,0 +1,20 @@
+{% extends 'tournaments/base.html' %}
+
+{% block title %}Edit Match Time | VolleyIQ{% endblock %}
+
+{% block content %}
+<div class="card form-card">
+    <h2>Edit Match Time</h2>
+    <p><strong>{{ match.home_team.name }}</strong> vs <strong>{{ match.away_team.name }}</strong></p>
+
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-accent">Save Changes</button>
+            <a href="/tournaments/{{ match.tournament.id }}/" class="btn btn-outline">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

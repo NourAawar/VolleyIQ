@@ -20,8 +20,14 @@
         </div>
 
         <div class="actions" style="margin-top: 24px;">
-            <a class="btn btn-accent" href="/create/">Create Tournament</a>
+            {% for group in user.groups.all %}
+                {% if group.name == 'Club Manager' %}
+                    <a class="btn btn-accent" href="/create/">Create Tournament</a>
+                {% endif %}
+            {% endfor %}
+
             <a class="btn btn-primary" href="/list/">View Tournaments</a>
+
             <form action="/accounts/logout/" method="post" style="display:inline;">
                 {% csrf_token %}
                 <button type="submit" class="btn btn-outline">Logout</button>
@@ -34,4 +40,32 @@
         </div>
     {% endif %}
 </div>
+
+{% if user.is_authenticated %}
+<div class="card table-card" style="margin-top:24px;">
+    <h2>Recent Notifications</h2>
+    <p class="small-text">Latest updates related to your matches and tournaments.</p>
+
+    {% if notifications %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Message</th>
+                    <th>Created At</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for notification in notifications %}
+                    <tr>
+                        <td>{{ notification.message }}</td>
+                        <td>{{ notification.created_at|date:"M d, Y - H:i" }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>No notifications yet.</p>
+    {% endif %}
+</div>
+{% endif %}
 {% endblock %}

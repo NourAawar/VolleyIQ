@@ -1,14 +1,31 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponseForbidden
-from .forms import TournamentForm, TeamForm, AssignCoachForm, AddPlayerForm, RegisterTeamForm
-from .models import Tournament, Team, TeamMembership
+from .forms import (
+    TournamentForm, TeamForm, AssignCoachForm, AddPlayerForm,
+    RegisterTeamForm, EditMatchTimeForm, UpdateMatchVenueForm
+)
+from .models import Tournament, Team, TeamMembership, Match, Notification
+from django.contrib import messages
+from datetime import timedelta, time
+
+from django.db import models
+
+def is_coach(user):
+    return user.groups.filter(name='Coach').exists()
 
 def is_club_manager(user): 
     return user.groups.filter(name = 'Club Manager').exists()
 
 def home(request):
-    return render(request, 'tournaments/home.html')
+    notifications = []
+
+    if request.user.is_authenticated:
+        notifications = request.user.notifications.order_by('-created_at')[:5]
+
+    return render(request, 'tournaments/home.html', {
+        'notifications': notifications,
+    })
 
 @login_required
 def create_tournament(request):
@@ -32,12 +49,14 @@ def tournament_list(request):
 
 @login_required 
 def tournament_detail(request, tournament_id):
-    tournament = get_object_or_404(Tournament, id = tournament_id)
+    tournament = get_object_or_404(Tournament, id=tournament_id)
     registered_teams = tournament.teams.select_related('coach')
+    matches = tournament.matches.select_related('home_team', 'away_team')
 
     return render(request, 'tournaments/tournament_detail.html', {
-        'tournament': tournament, 
+        'tournament': tournament,
         'registered_teams': registered_teams,
+        'matches': matches,
     })
 
 @login_required
@@ -68,15 +87,26 @@ def remove_team(request, tournament_id, team_id):
     if not is_club_manager(request.user): 
         return HttpResponseForbidden("Only Club Managers can remove teams.")
     
-    tournament = get_object_or_404(Tournament, id = tournament_id)
-    team = get_object_or_404(Team, id = team_id)
+    tournament = get_object_or_404(Tournament, id=tournament_id)
+    team = get_object_or_404(Team, id=team_id)
+
+    team_has_matches = tournament.matches.filter(
+        models.Q(home_team=team) | models.Q(away_team=team)
+    ).exists()
+
+    if team_has_matches:
+        messages.error(request, "Cannot remove a team after the schedule has been generated.")
+        return redirect('tournament_detail', tournament_id=tournament.id)
 
     if request.method == 'POST': 
         tournament.teams.remove(team)
-
-        return redirect('tournament_detail', tournament_id = tournament.id)
+        messages.success(request, "Team removed from tournament successfully.")
+        return redirect('tournament_detail', tournament_id=tournament.id)
     
-    return render(request, 'tournaments/confirm_remove_team.html', {'tournament': tournament, 'team': team,})
+    return render(request, 'tournaments/confirm_remove_team.html', {
+        'tournament': tournament,
+        'team': team,
+    })
 
 @login_required 
 def team_list(request): 
@@ -162,3 +192,120 @@ def remove_player(request, team_id, membership_id):
         return redirect('team_detail', team_id = team.id)
     
     return render(request, 'tournaments/confirm_remove_player.html', {'team': team, 'membership': membership,})
+
+@login_required
+def edit_match_time(request, match_id):
+    if not is_club_manager(request.user):
+        return HttpResponseForbidden("Only Club Managers can edit match times.")
+
+    match = get_object_or_404(Match, id=match_id)
+
+    if request.method == 'POST':
+        form = EditMatchTimeForm(request.POST, instance=match)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Match time updated successfully.")
+            return redirect('tournament_detail', tournament_id=match.tournament.id)
+    else:
+        form = EditMatchTimeForm(instance=match)
+
+    return render(request, 'tournaments/edit_match_time.html', {
+        'form': form,
+        'match': match,
+    })
+
+@login_required
+def update_match_venue(request, match_id):
+    if not is_club_manager(request.user):
+        return HttpResponseForbidden("Only Club Managers can update match venues.")
+
+    match = get_object_or_404(Match, id=match_id)
+
+    if request.method == 'POST':
+        form = UpdateMatchVenueForm(request.POST, instance=match)
+        if form.is_valid():
+            updated_match = form.save()
+
+            coach1 = updated_match.home_team.coach
+            coach2 = updated_match.away_team.coach
+
+            if coach1:
+                Notification.objects.create(
+                    user=coach1,
+                    message=f"Venue updated for {updated_match.home_team.name} vs {updated_match.away_team.name}: {updated_match.venue}"
+                )
+
+            if coach2 and coach2 != coach1:
+                Notification.objects.create(
+                    user=coach2,
+                    message=f"Venue updated for {updated_match.home_team.name} vs {updated_match.away_team.name}: {updated_match.venue}"
+                )
+
+            messages.success(request, "Match venue updated successfully.")
+            return redirect('tournament_detail', tournament_id=updated_match.tournament.id)
+    else:
+        form = UpdateMatchVenueForm(instance=match)
+
+    return render(request, 'tournaments/update_match_venue.html', {
+        'form': form,
+        'match': match,
+    })
+
+@login_required
+def team_match_schedule(request, team_id):
+    team = get_object_or_404(Team, id=team_id)
+
+    if not is_coach(request.user) or team.coach != request.user:
+        return HttpResponseForbidden("You can only view the schedule for your own team.")
+
+    matches = Match.objects.filter(
+        models.Q(home_team=team) | models.Q(away_team=team)
+    ).select_related('tournament', 'home_team', 'away_team')
+
+    return render(request, 'tournaments/team_match_schedule.html', {
+        'team': team,
+        'matches': matches,
+    })
+
+@login_required
+def generate_schedule(request, tournament_id):
+    if not is_club_manager(request.user):
+        return HttpResponseForbidden("Only Club Managers can generate schedules.")
+
+    tournament = get_object_or_404(Tournament, id=tournament_id)
+    teams = list(tournament.teams.all())
+
+    if len(teams) < 2:
+        messages.error(request, "At least 2 teams are required to generate a schedule.")
+        return redirect('tournament_detail', tournament_id=tournament.id)
+
+    if tournament.matches.exists():
+        messages.warning(request, "Schedule already exists for this tournament.")
+        return redirect('tournament_detail', tournament_id=tournament.id)
+
+    if tournament.format != 'round_robin':
+        messages.error(request, "Automatic schedule generation is currently supported for round robin tournaments only.")
+        return redirect('tournament_detail', tournament_id=tournament.id)
+
+    current_date = tournament.start_date
+    default_time = time(18, 0)  # 6:00 PM
+    default_venue = "Main Court"
+
+    for i in range(len(teams)):
+        for j in range(i + 1, len(teams)):
+            Match.objects.create(
+                tournament=tournament,
+                home_team=teams[i],
+                away_team=teams[j],
+                match_date=current_date,
+                match_time=default_time,
+                venue=default_venue
+            )
+
+            current_date += timedelta(days=1)
+
+            if current_date > tournament.end_date:
+                current_date = tournament.start_date
+
+    messages.success(request, "Tournament schedule generated successfully.")
+    return redirect('tournament_detail', tournament_id=tournament.id)

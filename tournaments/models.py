@@ -61,3 +61,40 @@ class TeamMembership(models.Model):
     
     def __str__(self): 
         return f"{self.player.username} → {self.team.name}"
+    
+class Match(models.Model):
+    tournament = models.ForeignKey(
+        Tournament,
+        on_delete=models.CASCADE,
+        related_name='matches'
+    )
+    home_team = models.ForeignKey(
+        Team,
+        on_delete=models.CASCADE,
+        related_name='home_matches'
+    )
+    away_team = models.ForeignKey(
+        Team,
+        on_delete=models.CASCADE,
+        related_name='away_matches'
+    )
+    match_date = models.DateField()
+    match_time = models.TimeField()
+    venue = models.CharField(max_length=150, default='Main Court')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['match_date', 'match_time']
+
+    def __str__(self):
+        return f"{self.home_team} vs {self.away_team} - {self.tournament.name}"
+    
+class Notification(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications')
+    message = models.CharField(max_length=255)
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_read = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"To {self.user.username}: {self.message}"
+    

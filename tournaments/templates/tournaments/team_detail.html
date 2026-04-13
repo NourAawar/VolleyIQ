@@ -1,36 +1,47 @@
 {% extends 'tournaments/base.html' %}
 
-{% block title %}{{team.name}} | VolleyIQ{% endblock %}
+{% block title %}{{ team.name }} | VolleyIQ{% endblock %}
 
 {% block content %}
-<div class = "card">
-    <h2 style = "margin-top:0;">{{team.name}}</h2>
+<div class="card">
+    <h2 style="margin-top:0;">{{ team.name }}</h2>
     
-    <div class = "role-box">
-        <strong>Coach: </strong>
+    <div class="role-box">
+        <strong>Coach:</strong>
         {% if team.coach %}
             {{ team.coach.get_full_name|default:team.coach.username }}
         {% else %}
-            <span style = "color:var(--muted)">No coach assigned yet</span>
+            <span style="color:var(--muted)">No coach assigned yet</span>
         {% endif %}
     </div>
 
     {% for group in user.groups.all %}
         {% if group.name == 'Club Manager' %}
-            <div class = "form-actions" style = "margin-top:20px;">
-                <a href = "/teams/{{team.id}}/assign-coach/" class = "btn btn-primary">
+            <div class="form-actions" style="margin-top:20px;">
+                <a href="/teams/{{ team.id }}/assign-coach/" class="btn btn-primary">
                     Assign / Change Coach
                 </a>
-                <a href = "/teams/{{team.id}}/add-player/" class = "btn btn-accent">
+                <a href="/teams/{{ team.id }}/add-player/" class="btn btn-accent">
                     Add Player
                 </a>
             </div>
         {% endif %}
     {% endfor %}
+
+    {% for group in user.groups.all %}
+        {% if group.name == 'Coach' and team.coach == user %}
+            <div class="form-actions" style="margin-top:20px;">
+                <a href="/teams/{{ team.id }}/schedule/" class="btn btn-primary">
+                    View Match Schedule
+                </a>
+            </div>
+        {% endif %}
+    {% endfor %}
 </div>
-<div class = "card table-card">
+
+<div class="card table-card">
     <h2>Roster</h2>
-    <p class = "small-text">Players currently on this team.</p>
+    <p class="small-text">Players currently on this team.</p>
 
     <table>
         <thead>
@@ -48,19 +59,19 @@
         <tbody>
             {% for m in memberships %}
                 <tr>
-                    <td>{{m.jersey_number|default:"-"}}</td>
-                    <td>{{m.player.get_full_name|default:m.player.username}}</td>
+                    <td>{{ m.jersey_number|default:"-" }}</td>
+                    <td>{{ m.player.get_full_name|default:m.player.username }}</td>
                     <td>
                         {% if m.position %}
-                            <span class = "badge">{{m.get_position_display}}</span>
+                            <span class="badge">{{ m.get_position_display }}</span>
                         {% else %}
-                            <span style = "color:var(--muted)">-</span>
+                            <span style="color:var(--muted)">-</span>
                         {% endif %}
                     </td>
                     {% for group in user.groups.all %}
                         {% if group.name == 'Club Manager' %}
                             <td>
-                                <a href = "/teams/{{team.id}}/remove-player/{{m.id}}/" class = "btn btn-outline" style = "padding:5px 12px;font-size:0.85rem;color:#c0392b;border-color:#c0392b;">
+                                <a href="/teams/{{ team.id }}/remove-player/{{ m.id }}/" class="btn btn-outline" style="padding:5px 12px;font-size:0.85rem;color:#c0392b;border-color:#c0392b;">
                                     Remove
                                 </a>
                             </td>
@@ -69,17 +80,16 @@
                 </tr>
             {% empty %}
                 <tr>
-                    <td colspan = "3">No players on this roster yet.</td>
+                    <td colspan="4">No players on this roster yet.</td>
                 </tr>
             {% endfor %}
         </tbody>
     </table>
 </div>
 
-<div class = "form-actions" style = "margin-top:20px;">
-    <a href = "/teams/" class = "btn btn-outline">
+<div class="form-actions" style="margin-top:20px;">
+    <a href="/teams/" class="btn btn-outline">
         Back to Teams
     </a>
 </div>
-
 {% endblock %}
