@@ -17,7 +17,7 @@ def create_tournament(request):
 
     if request.method == 'POST':
         form = TournamentForm(request.POST)
-        if form.is_valid():
+        if form.is_valid(): 
             form.save()
             return redirect('tournament_list')
     else:
@@ -99,3 +99,18 @@ def add_player(request, team_id):
         form = AddPlayerForm(team = team)
 
     return render(request, 'tournaments/add_player.html', {'form': form, 'team': team})
+
+@login_required 
+def remove_player(request, team_id, membership_id): 
+    if not is_club_manager(request.user): 
+        return HttpResponseForbidden("Only Club Managers can remove players.")
+    
+    team = get_object_or_404(Team, id = team_id)
+    membership = get_object_or_404(TeamMembership, id = membership_id, team = team)
+
+    if request.method == 'POST': 
+        membership.delete()
+
+        return redirect('team_detail', team_id = team.id)
+    
+    return render(request, 'tournaments/confirm_remove_player.html', {'team': team, 'membership': membership,})

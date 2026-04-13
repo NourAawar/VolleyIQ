@@ -38,6 +38,11 @@
                 <th>#</th>
                 <th>Player</th>
                 <th>Position</th>
+                {% for group in user.groups.all %}
+                    {% if group.name == 'Club Manager' %}
+                        <th>Action</th>
+                    {% endif %}
+                {% endfor %}
             </tr>
         </thead>
         <tbody>
@@ -52,6 +57,15 @@
                             <span style = "color:var(--muted)">-</span>
                         {% endif %}
                     </td>
+                    {% for group in user.groups.all %}
+                        {% if group.name == 'Club Manager' %}
+                            <td>
+                                <a href = "/teams/{{team.id}}/remove-player/{{m.id}}/" class = "btn btn-outline" style = "padding:5px 12px;font-size:0.85rem;color:#c0392b;border-color:#c0392b;">
+                                    Remove
+                                </a>
+                            </td>
+                        {% endif %}
+                    {% endfor %}
                 </tr>
             {% empty %}
                 <tr>
