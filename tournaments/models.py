@@ -81,6 +81,10 @@ class Match(models.Model):
     match_date = models.DateField()
     match_time = models.TimeField()
     venue = models.CharField(max_length=150, default='Main Court')
+
+    home_score = models.PositiveIntegerField(null=True, blank=True)
+    away_score = models.PositiveIntegerField(null=True, blank=True)
+    
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

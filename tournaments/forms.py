@@ -103,3 +103,12 @@ class UpdateMatchVenueForm(forms.ModelForm):
         widgets = {
             'venue': forms.TextInput(attrs={'placeholder': 'Enter new venue'}),
         }
+
+class MatchScoreForm(forms.ModelForm):
+    class Meta:
+        model = Match
+        fields = ['home_score', 'away_score']
+        widgets = {
+            'home_score': forms.NumberInput(attrs={'placeholder': 'Home team score'}),
+            'away_score': forms.NumberInput(attrs={'placeholder': 'Away team score'}),
+            }

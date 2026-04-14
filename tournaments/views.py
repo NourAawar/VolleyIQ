@@ -3,7 +3,8 @@ from django.contrib.auth.decorators import login_required
 from django.http import HttpResponseForbidden
 from .forms import (
     TournamentForm, TeamForm, AssignCoachForm, AddPlayerForm,
-    RegisterTeamForm, EditMatchTimeForm, UpdateMatchVenueForm
+    RegisterTeamForm, EditMatchTimeForm, UpdateMatchVenueForm,
+    MatchScoreForm
 )
 from .models import Tournament, Team, TeamMembership, Match, Notification
 from django.contrib import messages
@@ -309,3 +310,24 @@ def generate_schedule(request, tournament_id):
 
     messages.success(request, "Tournament schedule generated successfully.")
     return redirect('tournament_detail', tournament_id=tournament.id)
+
+@login_required
+def update_match_score(request, match_id):
+    if not is_coach(request.user):
+        return HttpResponseForbidden("Only coaches can enter match scores.")
+
+    match = get_object_or_404(Match, id=match_id)
+
+    if request.method == 'POST':
+        form = MatchScoreForm(request.POST, instance=match)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Match score updated successfully.")
+            return redirect('tournament_detail', tournament_id=match.tournament.id)
+    else:
+        form = MatchScoreForm(instance=match)
+
+    return render(request, 'tournaments/update_match_score.html', {
+        'form': form,
+        'match': match,
+    })

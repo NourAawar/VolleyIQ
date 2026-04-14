@@ -20,4 +20,5 @@ urlpatterns = [
     path('matches/<int:match_id>/edit-time/', views.edit_match_time, name='edit_match_time'),
     path('matches/<int:match_id>/update-venue/', views.update_match_venue, name='update_match_venue'),
     path('teams/<int:team_id>/schedule/', views.team_match_schedule, name='team_match_schedule'),
+    path('matches/<int:match_id>/score/', views.update_match_score, name='update_match_score'),
 ]
