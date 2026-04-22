@@ -92,4 +92,26 @@
         Back to Teams
     </a>
 </div>
+
+<div class="card" style="margin-top:20px;">
+    <h3>Performance Trend</h3>
+
+    {% if trend %}
+        <p>
+            Last matches:
+            {% for t in trend %}
+                {% if t == "W" %}
+                    🟢 W
+                {% else %}
+                    🔴 L
+                {% endif %}
+            {% endfor %}
+        </p>
+    {% else %}
+        <p>No recent match data.</p>
+    {% endif %}
+
+    <p><strong>Status:</strong> {{ performance }}</p>
+    
+</div>
 {% endblock %}

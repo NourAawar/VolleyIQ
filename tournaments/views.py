@@ -148,7 +148,44 @@ def team_detail(request, team_id):
     team = get_object_or_404(Team, id = team_id)
     memberships = team.memberships.select_related('player')
 
-    return render(request, 'tournaments/team_detail.html', {'team': team, 'memberships': memberships})
+    matches = Match.objects.filter(
+    models.Q(home_team=team) | models.Q(away_team=team)
+    ).order_by('-match_date')
+
+    last_matches = matches[:3]
+
+    trend = []
+    for m in last_matches:
+        if m.home_score is None or m.away_score is None:
+            continue
+
+        if m.home_team == team:
+            trend.append("W" if m.home_score > m.away_score else "L")
+        else:
+            trend.append("W" if m.away_score > m.home_score else "L")
+
+    trend = trend[::-1]  # chronological order
+
+    wins_count = trend.count("W")
+    losses_count = trend.count("L")
+
+    performance = 0
+    if not trend:
+        performance = "No data yet"
+    elif wins_count > losses_count:
+        performance = "Improving 📈"
+    elif losses_count > wins_count:
+        performance = "Declining 📉"
+    else:
+        performance = "Stable ➖"
+
+    return render(request, 'tournaments/team_detail.html', {
+    'team': team,
+    'memberships': memberships,
+    'matches': matches,
+    'trend': trend,
+    'performance': performance
+    })
 
 @login_required 
 def assign_coach(request, team_id): 
