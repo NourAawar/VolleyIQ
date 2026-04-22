@@ -48,16 +48,27 @@ def tournament_list(request):
     tournaments = Tournament.objects.all()
     return render(request, 'tournaments/tournament_list.html', {'tournaments': tournaments})
 
-@login_required 
+@login_required
 def tournament_detail(request, tournament_id):
     tournament = get_object_or_404(Tournament, id=tournament_id)
+
     registered_teams = tournament.teams.select_related('coach')
-    matches = tournament.matches.select_related('home_team', 'away_team')
+
+    matches = tournament.matches.select_related(
+        'home_team',
+        'away_team'
+    )
+
+    standings = tournament.teams.order_by(
+        '-points',
+        '-wins'
+    )
 
     return render(request, 'tournaments/tournament_detail.html', {
         'tournament': tournament,
         'registered_teams': registered_teams,
         'matches': matches,
+        'standings': standings,
     })
 
 @login_required
@@ -321,7 +332,9 @@ def update_match_score(request, match_id):
     if request.method == 'POST':
         form = MatchScoreForm(request.POST, instance=match)
         if form.is_valid():
-            form.save()
+            match = form.save()
+            from .utils import update_standings
+            update_standings(match.tournament)
             messages.success(request, "Match score updated successfully.")
             return redirect('tournament_detail', tournament_id=match.tournament.id)
     else:

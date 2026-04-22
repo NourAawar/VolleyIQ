@@ -94,7 +94,15 @@
         <td>{{ match.match_date }}</td>
         <td>{{ match.match_time }}</td>
         <td>
-    {{ match.home_team.name }} {{ match.home_score }} - {{ match.away_score }} {{ match.away_team.name }}
+    {{ match.home_team.name }}
+
+    {% if match.home_score is not None and match.away_score is not None %}
+        {{ match.home_score }} - {{ match.away_score }}
+    {% else %}
+        <span>vs</span>
+    {% endif %}
+
+    {{ match.away_team.name }}
 </td>
         <td>{{ match.venue }}</td>
 
@@ -123,4 +131,31 @@
     <div class="form-actions" style="margin-top:20px;">
         <a href="/list/" class="btn btn-outline">Back to Tournaments</a>
     </div>
-    {% endblock %}
+    <div class="card" style="margin-top:24px;">
+    <h2>Standings</h2>
+
+    <table>
+        <tr>
+            <th>Team</th>
+            <th>Wins</th>
+            <th>Losses</th>
+            <th>Points</th>
+        </tr>
+
+        {% for team in registered_teams %}
+        <tr>
+            <td>{{ team.name }}</td>
+            <td>{{ team.wins }}</td>
+            <td>{{ team.losses }}</td>
+            <td>{{ team.points }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+</div>
+
+<div class="form-actions" style="margin-top:20px;">
+    <a href="/list/" class="btn btn-outline">Back to Tournaments</a>
+</div>
+
+{% endblock %}
+   

@@ -24,14 +24,21 @@ class Tournament(models.Model):
 class Team(models.Model): 
     name = models.CharField(max_length = 100)
 
+    class Meta:
+        ordering = ['-points', '-wins']
+
     coach = models.ForeignKey(
         User, 
         null = True, 
         blank = True, 
         on_delete = models.SET_NULL, 
         related_name = 'coached_teams', 
-        limit_choices_to = {'groups__name': 'Coach'}, 
+        limit_choices_to = {'groups__name': 'Coach'},
     )
+
+    wins = models.IntegerField(default=0)
+    losses = models.IntegerField(default=0)
+    points = models.IntegerField(default=0)
 
     def __str__(self): 
         return self.name
@@ -84,7 +91,7 @@ class Match(models.Model):
 
     home_score = models.PositiveIntegerField(null=True, blank=True)
     away_score = models.PositiveIntegerField(null=True, blank=True)
-    
+
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
