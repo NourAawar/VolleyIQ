@@ -128,28 +128,31 @@
         </table>
     </div>
     
-    <div class="form-actions" style="margin-top:20px;">
-        <a href="/list/" class="btn btn-outline">Back to Tournaments</a>
-    </div>
     <div class="card" style="margin-top:24px;">
     <h2>Standings</h2>
 
     <table>
-        <tr>
-            <th>Team</th>
-            <th>Wins</th>
-            <th>Losses</th>
-            <th>Points</th>
-        </tr>
+        <thead>
+            <tr>
+                <th>Rank</th>
+                <th>Team</th>
+                <th>Wins</th>
+                <th>Losses</th>
+                <th>Points</th>
+            </tr>
+        </thead>
 
-        {% for team in registered_teams %}
-        <tr>
-            <td>{{ team.name }}</td>
-            <td>{{ team.wins }}</td>
-            <td>{{ team.losses }}</td>
-            <td>{{ team.points }}</td>
-        </tr>
-        {% endfor %}
+        <tbody>
+            {% for team in registered_teams %}
+            <tr>
+                <td>{{ forloop.counter }}</td>
+                <td>{{ team.name }}</td>
+                <td>{{ team.wins }}</td>
+                <td>{{ team.losses }}</td>
+                <td>{{ team.points }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
     </table>
 </div>
 
@@ -158,4 +161,3 @@
 </div>
 
 {% endblock %}
-   

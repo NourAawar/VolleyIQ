@@ -52,7 +52,7 @@ def tournament_list(request):
 def tournament_detail(request, tournament_id):
     tournament = get_object_or_404(Tournament, id=tournament_id)
 
-    registered_teams = tournament.teams.select_related('coach')
+    registered_teams = tournament.teams.all().order_by('-points', '-wins')
 
     matches = tournament.matches.select_related(
         'home_team',
