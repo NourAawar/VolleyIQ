@@ -5,7 +5,7 @@
 {% block content %}
 <div class="card">
     <h2 style="margin-top:0;">{{ team.name }}</h2>
-    
+
     <div class="role-box">
         <strong>Coach:</strong>
         {% if team.coach %}
@@ -18,12 +18,11 @@
     {% for group in user.groups.all %}
         {% if group.name == 'Club Manager' %}
             <div class="form-actions" style="margin-top:20px;">
-                <a href="/teams/{{ team.id }}/assign-coach/" class="btn btn-primary">
-                    Assign / Change Coach
-                </a>
-                <a href="/teams/{{ team.id }}/add-player/" class="btn btn-accent">
-                    Add Player
-                </a>
+                <a href="/teams/{{ team.id }}/assign-coach/" class="btn btn-primary">Assign / Change Coach</a>
+                <a href="/teams/{{ team.id }}/add-player/" class="btn btn-accent">Add Player</a>
+                <a href="/players/create/?team_id={{ team.id }}" class="btn btn-accent">Create New Player</a>
+                <a href="/players/" class="btn btn-outline">View All Players</a>
+                <a href="/teams/{{ team.id }}/delete/" class="btn btn-outline" style="color:#c0392b; border-color:#c0392b;">Delete Team</a>
             </div>
         {% endif %}
     {% endfor %}
@@ -31,24 +30,12 @@
     {% for group in user.groups.all %}
         {% if group.name == 'Coach' and team.coach == user %}
             <div class="form-actions" style="margin-top:20px;">
-                <a href="/teams/{{ team.id }}/schedule/" class="btn btn-primary">
-                    View Match Schedule
-                </a>
-                <a href="/teams/{{ team.id }}/performance/" class="btn btn-accent">
-                    View Team Performance
-                </a>
-                <a href="/teams/{{ team.id }}/tasks/" class="btn btn-primary">
-                    View Tasks
-                </a>
-                <a href="/teams/{{ team.id }}/assign-task/" class="btn btn-accent">
-                    Assign Task
-                </a>
-                <a href = "/teams/{{team.id}}/send-message/" class = "btn btn-primary">
-                    Send Message
-                </a>
-                <a href = "/teams/{{ team.id }}/announcements/" class = "btn btn-outline">
-                    View Announcements
-                </a>
+                <a href="/teams/{{ team.id }}/schedule/" class="btn btn-primary">View Match Schedule</a>
+                <a href="/teams/{{ team.id }}/performance/" class="btn btn-accent">View Team Performance</a>
+                <a href="/teams/{{ team.id }}/tasks/" class="btn btn-primary">View Tasks</a>
+                <a href="/teams/{{ team.id }}/assign-task/" class="btn btn-accent">Assign Task</a>
+                <a href="/teams/{{ team.id }}/send-message/" class="btn btn-primary">Send Message</a>
+                <a href="/teams/{{ team.id }}/announcements/" class="btn btn-outline">View Announcements</a>
             </div>
         {% endif %}
     {% endfor %}
@@ -103,9 +90,7 @@
 </div>
 
 <div class="form-actions" style="margin-top:20px;">
-    <a href="/teams/" class="btn btn-outline">
-        Back to Teams
-    </a>
+    <a href="/teams/" class="btn btn-outline">Back to Teams</a>
 </div>
 
 <div class="card" style="margin-top:20px;">
@@ -127,7 +112,6 @@
     {% endif %}
 
     <p><strong>Status:</strong> {{ performance }}</p>
-    
 </div>
 
 <div class="card" style="margin-top:24px;">

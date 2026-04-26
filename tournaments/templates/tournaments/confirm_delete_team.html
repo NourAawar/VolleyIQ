@@ -1,0 +1,26 @@
+{% extends 'tournaments/base.html' %}
+
+{% block title %}Delete Team | VolleyIQ{% endblock %}
+
+{% block content %}
+<div class="card form-card">
+    <h2>Delete Team</h2>
+    <p>Are you sure you want to delete <strong>{{ team.name }}</strong>? This cannot be undone.</p>
+
+    {% if match_count > 0 %}
+        <div class="role-box" style="border-left:4px solid #c0392b; margin-bottom:16px;">
+            <strong>Warning:</strong> This team has {{ match_count }} match{{ match_count|pluralize }} scheduled. Deleting this team will also permanently delete those matches and any associated scores.
+        </div>
+    {% endif %}
+
+    <form method="post">
+        {% csrf_token %}
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary" style="background:#c0392b; border-color:#c0392b;">
+                Yes, Delete Team
+            </button>
+            <a href="/teams/{{ team.id }}/" class="btn btn-outline">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

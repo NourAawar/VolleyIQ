@@ -1,0 +1,70 @@
+{% extends 'tournaments/base.html' %}
+
+{% block title %}Create Player | VolleyIQ{% endblock %}
+
+{% block content %}
+<div class="card form-card">
+    <h2>Create Player Account</h2>
+    <p class="small-text">This will create a new user account with the Player role. The player can log in with the username and password you set here.</p>
+
+    <form method="post">
+        {% csrf_token %}
+        {% if team_id %}
+            <input type="hidden" name="team_id" value="{{ team_id }}">
+        {% endif %}
+
+        {% if form.errors %}
+            <div class="alert alert-error" style="margin-bottom:16px;">
+                {% for field in form %}
+                    {% for error in field.errors %}
+                        <p style="margin:4px 0;">{{ field.label }}: {{ error }}</p>
+                    {% endfor %}
+                {% endfor %}
+                {% for error in form.non_field_errors %}
+                    <p style="margin:4px 0;">{{ error }}</p>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <div class="form-row" style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+            <div>
+                <label>First Name</label>
+                {{ form.first_name }}
+            </div>
+            <div>
+                <label>Last Name</label>
+                {{ form.last_name }}
+            </div>
+        </div>
+
+        <div style="margin-top:14px;">
+            <label>Username <span style="color:#c0392b;">*</span></label>
+            {{ form.username }}
+        </div>
+
+        <div style="margin-top:14px;">
+            <label>Email</label>
+            {{ form.email }}
+        </div>
+
+        <div style="margin-top:14px;">
+            <label>Password <span style="color:#c0392b;">*</span></label>
+            {{ form.password1 }}
+        </div>
+
+        <div style="margin-top:14px;">
+            <label>Confirm Password <span style="color:#c0392b;">*</span></label>
+            {{ form.password2 }}
+        </div>
+
+        <div class="form-actions" style="margin-top:24px;">
+            <button type="submit" class="btn btn-accent">Create Player</button>
+            {% if team_id %}
+                <a href="/teams/{{ team_id }}/add-player/" class="btn btn-outline">Cancel</a>
+            {% else %}
+                <a href="/players/" class="btn btn-outline">Cancel</a>
+            {% endif %}
+        </div>
+    </form>
+</div>
+{% endblock %}

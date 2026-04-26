@@ -17,11 +17,15 @@ urlpatterns = [
     path('teams/', views.team_list, name='team_list'),
     path('teams/create/', views.create_team, name='create_team'),
     path('teams/<int:team_id>/', views.team_detail, name='team_detail'),
+    path('teams/<int:team_id>/delete/', views.delete_team, name='delete_team'),
     path('teams/<int:team_id>/assign-coach/', views.assign_coach, name='assign_coach'),
     path('teams/<int:team_id>/add-player/', views.add_player, name='add_player'),
     path('teams/<int:team_id>/remove-player/<int:membership_id>/', views.remove_player, name='remove_player'),
     path('teams/<int:team_id>/assign-task/', views.assign_task, name='assign_task'),
     path('teams/<int:team_id>/tasks/', views.team_tasks, name='team_tasks'),
+
+    path('players/', views.player_list, name='player_list'),
+    path('players/create/', views.create_player, name='create_player'),
 
     path('matches/<int:match_id>/edit-time/', views.edit_match_time, name='edit_match_time'),
     path('matches/<int:match_id>/update-venue/', views.update_match_venue, name='update_match_venue'),
@@ -34,14 +38,15 @@ urlpatterns = [
     path('teams/<int:team_id>/performance/', views.team_performance, name='team_performance'),
     path('my-tasks/', views.my_tasks, name='my_tasks'),
 
-    path('teams/<int:team_id>/send-message/', views.send_team_message, name = 'send_team_message'),
-    path('announcements/send/', views.send_announcement, name = 'send_announcement'),
-    path('announcements/', views.team_announcements_all, name = 'team_announcements_all'),
-    path('teams/<int:team_id>/announcements/', views.team_announcements, name = 'team_announcements'),
+    path('teams/<int:team_id>/send-message/', views.send_team_message, name='send_team_message'),
+    path('announcements/send/', views.send_announcement, name='send_announcement'),
+    path('announcements/', views.team_announcements_all, name='team_announcements_all'),
+    path('teams/<int:team_id>/announcements/', views.team_announcements, name='team_announcements'),
 
-    path('my-profile/', views.my_profile, name = 'my_profile'), 
+    path('my-profile/', views.my_profile, name='my_profile'),
 
-    path('notifications/mark-read/', views.mark_notifications_read, name = 'mark_notifications_read'), 
-    path('notifications/<int:notification_id>/', views.notification_detail, name = 'notification_detail'),
+    path('notifications/mark-read/', views.mark_notifications_read, name='mark_notifications_read'),
+    path('notifications/<int:notification_id>/', views.notification_detail, name='notification_detail'),
+
     path('my-recommendations/', views.player_recommendations, name='player_recommendations'),
 ]
