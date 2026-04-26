@@ -42,5 +42,5 @@ urlpatterns = [
     path('my-profile/', views.my_profile, name = 'my_profile'), 
 
     path('notifications/mark-read/', views.mark_notifications_read, name = 'mark_notifications_read'), 
-    
+    path('notifications/<int:notification_id>/', views.notification_detail, name = 'notification_detail'), 
 ]

@@ -857,7 +857,8 @@ def send_team_message(request, team_id):
             for pid in player_ids:
                 Notification.objects.create( 
                     user_id = pid, 
-                    message = f"New message from coach {request.user.username}: {announcement.title}" 
+                    message = f"New message from coach {request.user.username}: {announcement.title}", 
+                    announcement = announcement,
                 ) 
 
             messages.success(request, "Message sent to team successfully.") 
@@ -885,10 +886,11 @@ def send_announcement(request):
             announcement.team = None
             announcement.save() 
 
-            for user in User.objects.exclude(id=request.user.id):
+            for user in User.objects.exclude(id = request.user.id):
                 Notification.objects.create( 
                     user = user,
-                    message = f"System announcement: {announcement.title}" 
+                    message = f"System announcement: {announcement.title}", 
+                    announcement = announcement, 
                 )
 
             messages.success(request, "Announcement sent to all users.")
@@ -974,5 +976,15 @@ def my_profile(request):
 def mark_notifications_read(request): 
     if request.method == 'POST': 
         request.user.notifications.filter(is_read = False).update(is_read = True) 
-        
+
     return redirect('home')
+
+@login_required
+def notification_detail(request, notification_id): 
+    notification = get_object_or_404(Notification, id = notification_id, user = request.user)
+    notification.is_read = True 
+    notification.save() 
+
+    return render(request, 'tournaments/notification_detail.html', { 
+        'notification': notification, 
+    })

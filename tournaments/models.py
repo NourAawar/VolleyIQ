@@ -113,6 +113,13 @@ class Match(models.Model):
 class Notification(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications')
     message = models.CharField(max_length=255)
+    announcement = models.ForeignKey(
+        'Announcement', 
+        null = True, 
+        blank = True, 
+        on_delete = models.SET_NULL, 
+        related_name = 'notifications'
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     is_read = models.BooleanField(default=False)
 
