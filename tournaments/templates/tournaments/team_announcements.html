@@ -1,0 +1,32 @@
+{% extends 'tournaments/base.html' %}
+
+{% block title %}Announcements | VolleyIQ{% endblock %}
+
+{% block content %}
+<div class = "card table-card">
+    <h2 style = "margin-top:0;">Announcements — {{team.name}}</h2>
+    <p class = "small-text">Team messages and system-wide announcements.</p>
+
+    {% if announcements %}
+        {% for a in announcements %}
+            <div class = "role-box" style = "margin-bottom: 16px;">
+                <div style = "display: flex; justify-content: space-between; align-items: center;">
+                    <strong>{{a.title}}</strong>
+                    <span class = "badge">{% if a.team %}Team{% else %}System{% endif %}</span>
+                </div>
+                <p style = "margin: 8px 0 4px;">{{a.body}}</p>
+                <p class = "small-text">By {{a.sender.username}} &middot; {{a.created_at|date:"M d, Y H:i"}}</p>
+            </div>
+        {% endfor %}
+    {% else %}
+        <p class = "small-text">No announcements yet.</p>
+    {% endif %}
+
+    <div class = "form-actions" style = "margin-top: 20px;">
+        {% if user.groups.all.0.name == 'Coach' %}
+            <a href = "/teams/{{ team.id }}/send-message/" class = "btn btn-accent">Send Message</a>
+        {% endif %}
+        <a href = "/teams/{{ team.id }}/" class = "btn btn-outline">Back to Team</a>
+    </div>
+</div>
+{% endblock %}

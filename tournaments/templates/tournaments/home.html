@@ -33,6 +33,11 @@
                 {% if group.name == 'Player' %}
                     <a class="btn btn-primary" href="/my-tasks/">My Tasks</a>
                     <a class="btn btn-primary" href="/my-performance/">My Performance</a>
+                    {% for team in player_teams %}
+                        <a class = "btn btn-outline" href = "/teams/{{ team.id }}/announcements/">
+                            {{team.name}} Announcements
+                        </a>
+                    {% endfor %}
                 {% endif %}
             {% endfor %}
 

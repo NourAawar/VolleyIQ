@@ -35,12 +35,16 @@ def is_club_manager(user):
 
 def home(request):
     notifications = []
+    player_teams = []
 
     if request.user.is_authenticated:
         notifications = request.user.notifications.order_by('-created_at')[:5]
+        if is_player(request.user): 
+            player_teams = Team.objects.filter(memberships__player = request.user)
 
     return render(request, 'tournaments/home.html', {
         'notifications': notifications,
+        'player_teams': player_teams,
     })
 
 
@@ -803,7 +807,7 @@ def send_team_message(request, team_id):
 
             messages.success(request, "Message sent to team successfully.") 
 
-            return redirect('team_detail', team_id = team.id) 
+            return redirect('team_announcements', team_id = team.id) 
         
     else:
         form = TeamMessageForm() 
@@ -851,4 +855,31 @@ def team_announcements_all(request):
 
     return render(request, 'tournaments/team_announcements_all.html', {
         'announcements': announcements, 
+    })
+
+@login_required
+def team_announcements(request, team_id):
+    team = get_object_or_404(Team, id = team_id)
+
+    if is_club_manager(request.user):
+        pass
+
+    elif is_coach(request.user):
+        if team.coach != request.user:
+            return HttpResponseForbidden("You can only view announcements for your own team.")
+        
+    elif is_player(request.user):
+        if not team.memberships.filter(player = request.user).exists():
+            return HttpResponseForbidden("You can only view announcements for teams you are on.")
+        
+    else:
+        return HttpResponseForbidden("Access denied.")
+
+    announcements = Announcement.objects.filter(
+        models.Q(team = team) | models.Q(team__isnull = True)
+    ).select_related('sender', 'team')
+
+    return render(request, 'tournaments/team_announcements.html', {
+        'team': team,
+        'announcements': announcements,
     })
