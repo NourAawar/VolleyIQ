@@ -129,4 +129,21 @@
     <p><strong>Status:</strong> {{ performance }}</p>
     
 </div>
+
+<div class="card" style="margin-top:24px;">
+    <h2>Player Training Recommendations</h2>
+
+    {% if recommendations %}
+        {% for player, recs in recommendations.items %}
+            <h4>{{ player }}</h4>
+            <ul>
+                {% for r in recs %}
+                    <li>{{ r }}</li>
+                {% endfor %}
+            </ul>
+        {% endfor %}
+    {% else %}
+        <p>No recommendations available.</p>
+    {% endif %}
+</div>
 {% endblock %}

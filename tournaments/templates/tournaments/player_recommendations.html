@@ -1,0 +1,14 @@
+<h2>My Performance</h2>
+<p>Status: {{ status }}</p>
+
+<h3>Training Recommendations</h3>
+
+{% if recommendations %}
+    <ul>
+        {% for r in recommendations %}
+            <li>{{ r }}</li>
+        {% endfor %}
+    </ul>
+{% else %}
+    <p>No recommendations available.</p>
+{% endif %}

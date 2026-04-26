@@ -19,6 +19,7 @@ from django.contrib import messages
 from datetime import timedelta, time, date
 from django.db import models
 from django.db.models import Sum, F
+from .utils import get_player_recommendations
 
 
 def is_coach(user):
@@ -293,12 +294,15 @@ def team_detail(request, team_id):
     else:
         performance = "Stable ➖"
 
+    recommendations = get_player_recommendations(team)
+
     return render(request, 'tournaments/team_detail.html', {
         'team': team,
         'memberships': memberships,
         'matches': matches,
         'trend': trend,
         'performance': performance,
+        'recommendations' : recommendations
     })
 
 
@@ -987,4 +991,33 @@ def notification_detail(request, notification_id):
 
     return render(request, 'tournaments/notification_detail.html', { 
         'notification': notification, 
+    })
+
+@login_required
+def player_recommendations(request):
+    player = request.user
+
+    membership = TeamMembership.objects.filter(player=player).first()
+    if not membership:
+        return render(request, "tournaments/no_team.html")
+
+    team = membership.team
+
+    recommendations = get_player_recommendations(team)
+
+    wins = team.wins
+    losses = team.losses
+
+    if wins + losses == 0:
+        status = "No data yet"
+    elif wins > losses:
+        status = "Improving 📈"
+    elif losses > wins:
+        status = "Declining 📉"
+    else:
+        status = "Stable ➖"
+
+    return render(request, "tournaments/player_recommendations.html", {
+        "recommendations": recommendations.get(player.username, []),
+        "status": status   
     })

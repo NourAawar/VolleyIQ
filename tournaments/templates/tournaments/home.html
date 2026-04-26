@@ -293,4 +293,14 @@
     {% endif %}
 </div>
 {% endif %}
+
+{% if user.groups.all %}
+    {% for group in user.groups.all %}
+        {% if group.name == "Player" %}
+            <a href="{% url 'player_recommendations' %}" class="btn btn-primary">
+                My Recommendations
+            </a>
+        {% endif %}
+    {% endfor %}
+{% endif %}
 {% endblock %}
