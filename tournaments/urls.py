@@ -38,4 +38,9 @@ urlpatterns = [
     path('announcements/send/', views.send_announcement, name = 'send_announcement'),
     path('announcements/', views.team_announcements_all, name = 'team_announcements_all'),
     path('teams/<int:team_id>/announcements/', views.team_announcements, name = 'team_announcements'),
+
+    path('my-profile/', views.my_profile, name = 'my_profile'), 
+
+    path('notifications/mark-read/', views.mark_notifications_read, name = 'mark_notifications_read'), 
+    path('notifications/<int:notification_id>/', views.notification_detail, name = 'notification_detail'), 
 ]

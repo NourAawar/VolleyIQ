@@ -1,0 +1,27 @@
+{% extends 'tournaments/base.html' %}
+
+{% block title %}Notification | VolleyIQ{% endblock %}
+
+{% block content %}
+<div class = "card">
+    <h2 style = "margin-top: 0;">Notification</h2>
+
+    <div class = "role-box" style = "margin-top: 16px;">
+        {% if notification.announcement %}
+            <div style = "display: flex; justify-content: space-between; align-items: center;">
+                <strong>{{notification.announcement.title}}</strong>
+                <span class = "badge">{% if notification.announcement.team %}Team{% else %}System{% endif %}</span>
+            </div>
+            <p style = "margin: 8px 0 4px;">{{notification.announcement.body}}</p>
+            <p class = "small-text">By {{notification.announcement.sender.username}} &middot; {{notification.announcement.created_at|date:"M d, Y H:i"}}</p>
+        {% else %}
+            <p style = "margin: 0;">{{notification.message }}</p>
+            <p class = "small-text" style = "margin-top: 8px;">Received: {{notification.created_at|date:"M d, Y - H:i"}}</p>
+        {% endif %}
+    </div>
+
+    <div class = "form-actions" style = "margin-top: 20px;">
+        <a href = "/" class = "btn btn-primary">Back to Home</a>
+    </div>
+</div>
+{% endblock %}
