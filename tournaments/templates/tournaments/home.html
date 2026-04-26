@@ -28,6 +28,13 @@
 
             <a class="btn btn-primary" href="/list/">View Tournaments</a>
 
+            {% for group in user.groups.all %}
+                {% if group.name == 'Player' %}
+                    <a class="btn btn-primary" href="/my-tasks/">My Tasks</a>
+                    <a class="btn btn-primary" href="/my-performance/">My Performance</a>
+                {% endif %}
+            {% endfor %}
+
             <form action="/accounts/logout/" method="post" style="display:inline;">
                 {% csrf_token %}
                 <button type="submit" class="btn btn-outline">Logout</button>

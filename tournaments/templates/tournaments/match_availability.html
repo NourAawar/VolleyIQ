@@ -1,0 +1,69 @@
+{% extends 'tournaments/base.html' %}
+
+{% block title %}Player Availability | VolleyIQ{% endblock %}
+
+{% block content %}
+<div class="card" style="margin-bottom:24px;">
+    <h2 style="margin-top:0;">Player Availability</h2>
+    <div class="role-box">
+        <strong>Match:</strong>
+        {{ match.home_team.name }} vs {{ match.away_team.name }}
+        &nbsp;|&nbsp;
+        <strong>Date:</strong> {{ match.match_date }}
+        &nbsp;|&nbsp;
+        <strong>Venue:</strong> {{ match.venue }}
+    </div>
+    {% if team %}
+        <p class="small-text">Showing availability for <strong>{{ team.name }}</strong>.</p>
+    {% else %}
+        <p class="small-text">Showing availability for all players in this match.</p>
+    {% endif %}
+</div>
+
+<div class="card table-card">
+    <form method="post">
+        {% csrf_token %}
+        {{ formset.management_form }}
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Player</th>
+                    <th>Status</th>
+                    <th>Note</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for form in formset %}
+                    {% for hidden in form.hidden_fields %}{{ hidden }}{% endfor %}
+                    <tr>
+                        <td>{{ form.instance.player.get_full_name|default:form.instance.player.username }}</td>
+                        <td>{{ form.status }}</td>
+                        <td>{{ form.note }}</td>
+                    </tr>
+                    {% if form.errors %}
+                        <tr>
+                            <td colspan="3" style="color:#c0392b;font-size:0.85rem;">{{ form.errors }}</td>
+                        </tr>
+                    {% endif %}
+                {% empty %}
+                    <tr>
+                        <td colspan="3">No players found for this match.</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        {% if formset.forms %}
+            <div class="form-actions" style="margin-top:20px;">
+                <button type="submit" class="btn btn-accent">Save Availability</button>
+                <a href="/tournaments/{{ match.tournament.id }}/" class="btn btn-outline">Back to Tournament</a>
+            </div>
+        {% else %}
+            <div class="form-actions" style="margin-top:20px;">
+                <a href="/tournaments/{{ match.tournament.id }}/" class="btn btn-outline">Back to Tournament</a>
+            </div>
+        {% endif %}
+    </form>
+</div>
+{% endblock %}

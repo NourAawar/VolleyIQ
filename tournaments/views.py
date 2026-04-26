@@ -4,9 +4,11 @@ from django.http import HttpResponseForbidden
 from .forms import (
     TournamentForm, TeamForm, AssignCoachForm, AddPlayerForm,
     RegisterTeamForm, EditMatchTimeForm, UpdateMatchVenueForm,
-    MatchScoreForm
+    MatchScoreForm, AssignTaskForm, PlayerAvailabilityForm, AttendanceForm
 )
-from .models import Tournament, Team, TeamMembership, Match, Notification, PerformanceStat
+from .models import Tournament, Team, TeamMembership, Match, Notification, PerformanceStat, Task, PlayerAvailability, Attendance
+from django.forms import modelformset_factory
+from .utils import update_standings, notify_match_coaches
 from django.contrib import messages
 from datetime import timedelta, time, date
 from django.db import models
@@ -60,8 +62,9 @@ def delete_tournament(request, tournament_id):
     tournament = get_object_or_404(Tournament, id=tournament_id)
 
     if request.method == 'POST':
+        tournament_name = tournament.name
         tournament.delete()
-        messages.success(request, f"Tournament '{tournament.name}' has been deleted.")
+        messages.success(request, f"Tournament '{tournament_name}' has been deleted.")
         return redirect('tournament_list')
 
     return render(request, 'tournaments/confirm_delete_tournament.html', {
@@ -83,19 +86,15 @@ def tournament_detail(request, tournament_id):
 
     matches = tournament.matches.select_related(
         'home_team',
-        'away_team'
-    )
-
-    standings = tournament.teams.order_by(
-        '-points',
-        '-wins'
+        'away_team',
+        'home_team__coach',
+        'away_team__coach',
     )
 
     return render(request, 'tournaments/tournament_detail.html', {
         'tournament': tournament,
         'registered_teams': registered_teams,
         'matches': matches,
-        'standings': standings,
         'today': date.today(),
     })
 
@@ -286,7 +285,7 @@ def edit_match_time(request, match_id):
     if not is_club_manager(request.user):
         return HttpResponseForbidden("Only Club Managers can edit match times.")
 
-    match = get_object_or_404(Match, id=match_id)
+    match = get_object_or_404(Match.objects.select_related('tournament'), id=match_id)
 
     if match.match_date < date.today():
         messages.error(request, "Cannot edit the time of a match that has already taken place.")
@@ -312,7 +311,10 @@ def update_match_venue(request, match_id):
     if not is_club_manager(request.user):
         return HttpResponseForbidden("Only Club Managers can update match venues.")
 
-    match = get_object_or_404(Match, id=match_id)
+    match = get_object_or_404(
+        Match.objects.select_related('tournament', 'home_team__coach', 'away_team__coach'),
+        id=match_id
+    )
 
     if match.match_date < date.today():
         messages.error(request, "Cannot update the venue of a match that has already taken place.")
@@ -322,22 +324,10 @@ def update_match_venue(request, match_id):
         form = UpdateMatchVenueForm(request.POST, instance=match)
         if form.is_valid():
             updated_match = form.save()
-
-            coach1 = updated_match.home_team.coach
-            coach2 = updated_match.away_team.coach
-
-            if coach1:
-                Notification.objects.create(
-                    user=coach1,
-                    message=f"Venue updated for {updated_match.home_team.name} vs {updated_match.away_team.name}: {updated_match.venue}"
-                )
-
-            if coach2 and coach2 != coach1:
-                Notification.objects.create(
-                    user=coach2,
-                    message=f"Venue updated for {updated_match.home_team.name} vs {updated_match.away_team.name}: {updated_match.venue}"
-                )
-
+            notify_match_coaches(
+                updated_match,
+                f"Venue updated for {updated_match.home_team.name} vs {updated_match.away_team.name}: {updated_match.venue}"
+            )
             messages.success(request, "Match venue updated successfully.")
             return redirect('tournament_detail', tournament_id=updated_match.tournament.id)
     else:
@@ -501,7 +491,10 @@ def update_match_score(request, match_id):
     if not is_coach(request.user):
         return HttpResponseForbidden("Only coaches can enter match scores.")
 
-    match = get_object_or_404(Match, id=match_id)
+    match = get_object_or_404(
+        Match.objects.select_related('home_team__coach', 'away_team__coach', 'tournament'),
+        id=match_id
+    )
 
     if match.home_team.coach != request.user and match.away_team.coach != request.user:
         return HttpResponseForbidden("You can only enter scores for matches involving your team.")
@@ -514,7 +507,6 @@ def update_match_score(request, match_id):
         form = MatchScoreForm(request.POST, instance=match)
         if form.is_valid():
             match = form.save()
-            from .utils import update_standings
             update_standings(match.tournament)
             messages.success(request, "Match score updated successfully.")
             return redirect('tournament_detail', tournament_id=match.tournament.id)
@@ -524,4 +516,180 @@ def update_match_score(request, match_id):
     return render(request, 'tournaments/update_match_score.html', {
         'form': form,
         'match': match,
+    })
+
+
+@login_required
+def assign_task(request, team_id):
+    if not is_coach(request.user):
+        return HttpResponseForbidden("Only coaches can assign tasks.")
+
+    team = get_object_or_404(Team, id=team_id)
+
+    if team.coach != request.user:
+        return HttpResponseForbidden("You can only assign tasks to players on your own team.")
+
+    if request.method == 'POST':
+        form = AssignTaskForm(request.POST, team=team)
+        if form.is_valid():
+            task = form.save(commit=False)
+            task.assigned_by = request.user
+            task.team = team
+            task.save()
+            messages.success(request, "Task assigned successfully.")
+            return redirect('team_tasks', team_id=team.id)
+    else:
+        form = AssignTaskForm(team=team)
+
+    return render(request, 'tournaments/assign_task.html', {
+        'form': form,
+        'team': team,
+    })
+
+
+@login_required
+def team_tasks(request, team_id):
+    if not is_coach(request.user):
+        return HttpResponseForbidden("Only coaches can view team tasks.")
+
+    team = get_object_or_404(Team, id=team_id)
+
+    if team.coach != request.user:
+        return HttpResponseForbidden("You can only view tasks for your own team.")
+
+    tasks = Task.objects.filter(team=team).select_related('assigned_to', 'assigned_by')
+
+    return render(request, 'tournaments/team_tasks.html', {
+        'team': team,
+        'tasks': tasks,
+    })
+
+
+@login_required
+def my_tasks(request):
+    if not is_player(request.user):
+        return HttpResponseForbidden("Only players can view their tasks.")
+
+    tasks = Task.objects.filter(assigned_to=request.user).select_related('team', 'assigned_by')
+
+    if request.method == 'POST':
+        task_id = request.POST.get('task_id')
+        new_status = request.POST.get('status')
+        allowed_statuses = [s for s, _ in Task.STATUS_CHOICES]
+        if task_id and new_status in allowed_statuses:
+            Task.objects.filter(id=task_id, assigned_to=request.user).update(status=new_status)
+        return redirect('my_tasks')
+
+    return render(request, 'tournaments/my_tasks.html', {
+        'tasks': tasks,
+        'status_choices': Task.STATUS_CHOICES,
+    })
+
+
+@login_required
+def match_availability(request, match_id):
+    match = get_object_or_404(
+        Match.objects.select_related('home_team__coach', 'away_team__coach', 'tournament'),
+        id=match_id
+    )
+
+    if is_coach(request.user):
+        if match.home_team.coach == request.user:
+            team = match.home_team
+        elif match.away_team.coach == request.user:
+            team = match.away_team
+        else:
+            return HttpResponseForbidden("You can only view availability for your own team's matches.")
+        player_ids = list(team.memberships.values_list('player_id', flat=True))
+    elif is_club_manager(request.user):
+        team = None
+        player_ids = list(match.home_team.memberships.values_list('player_id', flat=True)) + \
+                     list(match.away_team.memberships.values_list('player_id', flat=True))
+    else:
+        return HttpResponseForbidden("Only coaches and club managers can view player availability.")
+
+    for pid in player_ids:
+        PlayerAvailability.objects.get_or_create(
+            player_id=pid,
+            match=match,
+            defaults={'status': 'uncertain', 'updated_by': request.user}
+        )
+
+    AvailabilityFormSet = modelformset_factory(PlayerAvailability, form=PlayerAvailabilityForm, extra=0)
+    queryset = PlayerAvailability.objects.filter(
+        match=match,
+        player_id__in=player_ids
+    ).select_related('player')
+
+    if request.method == 'POST':
+        formset = AvailabilityFormSet(request.POST, queryset=queryset)
+        if formset.is_valid():
+            instances = formset.save(commit=False)
+            for instance in instances:
+                instance.updated_by = request.user
+                instance.save()
+            messages.success(request, "Player availability updated.")
+            return redirect('match_availability', match_id=match.id)
+    else:
+        formset = AvailabilityFormSet(queryset=queryset)
+
+    return render(request, 'tournaments/match_availability.html', {
+        'formset': formset,
+        'match': match,
+        'team': team,
+    })
+
+
+@login_required
+def record_attendance(request, match_id):
+    if not is_coach(request.user):
+        return HttpResponseForbidden("Only coaches can record attendance.")
+
+    match = get_object_or_404(
+        Match.objects.select_related('home_team__coach', 'away_team__coach', 'tournament'),
+        id=match_id
+    )
+
+    if match.home_team.coach == request.user:
+        team = match.home_team
+    elif match.away_team.coach == request.user:
+        team = match.away_team
+    else:
+        return HttpResponseForbidden("You can only record attendance for your own team's matches.")
+
+    if match.match_date > date.today():
+        messages.error(request, "Cannot record attendance for a match that has not started yet.")
+        return redirect('tournament_detail', tournament_id=match.tournament.id)
+
+    player_ids = list(team.memberships.values_list('player_id', flat=True))
+
+    for pid in player_ids:
+        Attendance.objects.get_or_create(
+            player_id=pid,
+            match=match,
+            defaults={'status': 'present', 'recorded_by': request.user}
+        )
+
+    AttendanceFormSet = modelformset_factory(Attendance, form=AttendanceForm, extra=0)
+    queryset = Attendance.objects.filter(
+        match=match,
+        player_id__in=player_ids
+    ).select_related('player')
+
+    if request.method == 'POST':
+        formset = AttendanceFormSet(request.POST, queryset=queryset)
+        if formset.is_valid():
+            instances = formset.save(commit=False)
+            for instance in instances:
+                instance.recorded_by = request.user
+                instance.save()
+            messages.success(request, "Attendance recorded successfully.")
+            return redirect('tournament_detail', tournament_id=match.tournament.id)
+    else:
+        formset = AttendanceFormSet(queryset=queryset)
+
+    return render(request, 'tournaments/record_attendance.html', {
+        'formset': formset,
+        'match': match,
+        'team': team,
     })

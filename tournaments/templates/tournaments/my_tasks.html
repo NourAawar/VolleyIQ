@@ -1,0 +1,58 @@
+{% extends 'tournaments/base.html' %}
+
+{% block title %}My Tasks | VolleyIQ{% endblock %}
+
+{% block content %}
+<div class="card table-card">
+    <h2 style="margin-top:0;">My Tasks</h2>
+    <p class="small-text">Tasks assigned to you by your coach.</p>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Title</th>
+                <th>Team</th>
+                <th>Assigned By</th>
+                <th>Due Date</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for task in tasks %}
+                <tr>
+                    <td>
+                        <strong>{{ task.title }}</strong>
+                        {% if task.description %}
+                            <p class="small-text" style="margin:2px 0 0;">{{ task.description }}</p>
+                        {% endif %}
+                    </td>
+                    <td>{{ task.team.name }}</td>
+                    <td>{{ task.assigned_by.get_full_name|default:task.assigned_by.username|default:"—" }}</td>
+                    <td>{{ task.due_date|default:"—" }}</td>
+                    <td>
+                        <form method="post" style="display:inline;">
+                            {% csrf_token %}
+                            <input type="hidden" name="task_id" value="{{ task.id }}">
+                            <select name="status" onchange="this.form.submit()" style="font-size:0.85rem;padding:4px 8px;">
+                                {% for value, label in status_choices %}
+                                    <option value="{{ value }}" {% if task.status == value %}selected{% endif %}>
+                                        {{ label }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </form>
+                    </td>
+                </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="5">No tasks assigned to you yet.</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="form-actions" style="margin-top:20px;">
+        <a href="/" class="btn btn-outline">Back Home</a>
+    </div>
+</div>
+{% endblock %}

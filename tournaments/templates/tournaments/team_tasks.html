@@ -1,0 +1,47 @@
+{% extends 'tournaments/base.html' %}
+
+{% block title %}Team Tasks | VolleyIQ{% endblock %}
+
+{% block content %}
+<div class="card table-card">
+    <h2 style="margin-top:0;">Tasks — {{ team.name }}</h2>
+    <p class="small-text">All tasks assigned to players on this team.</p>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Title</th>
+                <th>Assigned To</th>
+                <th>Due Date</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for task in tasks %}
+                <tr>
+                    <td>
+                        <strong>{{ task.title }}</strong>
+                        {% if task.description %}
+                            <p class="small-text" style="margin:2px 0 0;">{{ task.description }}</p>
+                        {% endif %}
+                    </td>
+                    <td>{{ task.assigned_to.get_full_name|default:task.assigned_to.username }}</td>
+                    <td>{{ task.due_date|default:"—" }}</td>
+                    <td>
+                        <span class="badge">{{ task.get_status_display }}</span>
+                    </td>
+                </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="4">No tasks assigned yet.</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="form-actions" style="margin-top:20px;">
+        <a href="/teams/{{ team.id }}/assign-task/" class="btn btn-accent">Assign New Task</a>
+        <a href="/teams/{{ team.id }}/" class="btn btn-outline">Back to Team</a>
+    </div>
+</div>
+{% endblock %}

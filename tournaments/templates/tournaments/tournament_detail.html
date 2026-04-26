@@ -120,12 +120,26 @@
             {% endfor %}
 
             {% if user == match.home_team.coach or user == match.away_team.coach %}
+                <a href="/matches/{{ match.id }}/availability/" class="btn btn-outline">
+                    Availability
+                </a>
                 {% if match.match_date <= today %}
                     <a href="/matches/{{ match.id }}/score/" class="btn btn-primary">
                         Enter Score
                     </a>
+                    <a href="/matches/{{ match.id }}/attendance/" class="btn btn-accent">
+                        Attendance
+                    </a>
                 {% endif %}
             {% endif %}
+
+            {% for group in user.groups.all %}
+                {% if group.name == 'Club Manager' %}
+                    <a href="/matches/{{ match.id }}/availability/" class="btn btn-outline">
+                        Availability
+                    </a>
+                {% endif %}
+            {% endfor %}
         </td>
     </tr>
     {% empty %}

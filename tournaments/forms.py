@@ -1,6 +1,6 @@
 from django import forms
 from django.contrib.auth.models import User, Group
-from .models import Tournament, Team, TeamMembership, Match
+from .models import Tournament, Team, TeamMembership, Match, Task, PlayerAvailability, Attendance
 
 class TournamentForm(forms.ModelForm):
     class Meta:
@@ -26,7 +26,7 @@ class TeamForm(forms.ModelForm):
         model = Team
         fields = ['name']
         widgets = {
-            'name': forms.TextInput(attrs = {'placeholder': 'Enter team name'}),
+            'name': forms.TextInput(attrs={'placeholder': 'Enter team name'}),
         }
 
 class AssignCoachForm(forms.ModelForm):
@@ -39,14 +39,11 @@ class AssignCoachForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
         try:
-            coach_group = Group.objects.get(name = 'Coach')
-            self.fields['coach'].queryset = User.objects.filter(groups = coach_group)
-
+            coach_group = Group.objects.get(name='Coach')
+            self.fields['coach'].queryset = User.objects.filter(groups=coach_group)
         except Group.DoesNotExist:
             self.fields['coach'].queryset = User.objects.none()
-
         self.fields['coach'].required = False
         self.fields['coach'].empty_label = '- Remove coach -'
 
@@ -57,42 +54,34 @@ class AddPlayerForm(forms.ModelForm):
         widgets = {
             'player': forms.Select(),
             'position': forms.Select(),
-            'jersey_number': forms.NumberInput(attrs = {'placeholder': 'Jersey number (optional)'}),
+            'jersey_number': forms.NumberInput(attrs={'placeholder': 'Jersey number (optional)'}),
         }
 
-    def __init__(self, *args, team = None, **kwargs):
+    def __init__(self, *args, team=None, **kwargs):
         super().__init__(*args, **kwargs)
-
         try:
-            player_group = Group.objects.get(name = 'Player')
-            already_added = []
-
-            if team:
-                already_added = team.memberships.values_list('player_id', flat = True)
-
+            player_group = Group.objects.get(name='Player')
+            already_added = team.memberships.values_list('player_id', flat=True) if team else []
             self.fields['player'].queryset = User.objects.filter(
-                groups = player_group
-            ).exclude(id__in = already_added)
-
+                groups=player_group
+            ).exclude(id__in=already_added)
         except Group.DoesNotExist:
             self.fields['player'].queryset = User.objects.none()
-
         self.fields['position'].required = False
         self.fields['jersey_number'].required = False
 
 class RegisterTeamForm(forms.Form):
     team = forms.ModelChoiceField(
-        queryset = Team.objects.none(),
-        empty_label = '- Select a team -',
-        widget = forms.Select(),
+        queryset=Team.objects.none(),
+        empty_label='- Select a team -',
+        widget=forms.Select(),
     )
 
-    def __init__(self, *args, tournament = None, **kwargs):
+    def __init__(self, *args, tournament=None, **kwargs):
         super().__init__(*args, **kwargs)
-
         if tournament:
-            already_registered = tournament.teams.values_list('id', flat = True)
-            self.fields['team'].queryset = Team.objects.exclude(id__in = already_registered)
+            already_registered = tournament.teams.values_list('id', flat=True)
+            self.fields['team'].queryset = Team.objects.exclude(id__in=already_registered)
 
 class EditMatchTimeForm(forms.ModelForm):
     class Meta:
@@ -117,7 +106,6 @@ class EditMatchTimeForm(forms.ModelForm):
                 )
         return match_date
 
-
 class UpdateMatchVenueForm(forms.ModelForm):
     class Meta:
         model = Match
@@ -133,4 +121,40 @@ class MatchScoreForm(forms.ModelForm):
         widgets = {
             'home_score': forms.NumberInput(attrs={'placeholder': 'Home team score'}),
             'away_score': forms.NumberInput(attrs={'placeholder': 'Away team score'}),
+        }
+
+class AssignTaskForm(forms.ModelForm):
+    class Meta:
+        model = Task
+        fields = ['title', 'description', 'assigned_to', 'due_date']
+        widgets = {
+            'title': forms.TextInput(attrs={'placeholder': 'Task title'}),
+            'description': forms.Textarea(attrs={'placeholder': 'Task description (optional)', 'rows': 3}),
+            'due_date': forms.DateInput(attrs={'type': 'date'}),
+        }
+
+    def __init__(self, *args, team=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if team:
+            player_ids = team.memberships.values_list('player_id', flat=True)
+            self.fields['assigned_to'].queryset = User.objects.filter(id__in=player_ids)
+        else:
+            self.fields['assigned_to'].queryset = User.objects.none()
+        self.fields['description'].required = False
+        self.fields['due_date'].required = False
+
+class PlayerAvailabilityForm(forms.ModelForm):
+    class Meta:
+        model = PlayerAvailability
+        fields = ['status', 'note']
+        widgets = {
+            'note': forms.TextInput(attrs={'placeholder': 'Optional note'}),
+        }
+
+class AttendanceForm(forms.ModelForm):
+    class Meta:
+        model = Attendance
+        fields = ['status', 'note']
+        widgets = {
+            'note': forms.TextInput(attrs={'placeholder': 'Optional note'}),
         }
