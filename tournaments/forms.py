@@ -1,7 +1,7 @@
 from django import forms
 from django.contrib.auth.models import User, Group
 from django.contrib.auth.forms import UserCreationForm
-from .models import Tournament, Team, TeamMembership, Match, Task, PlayerAvailability, Attendance
+from .models import Tournament, Team, TeamMembership, Match, Task, PlayerAvailability, Attendance, Announcement
 
 class TournamentForm(forms.ModelForm):
     class Meta:
@@ -183,3 +183,12 @@ class RegistrationForm(UserCreationForm):
             group, _ = Group.objects.get_or_create(name=role_name)
             user.groups.add(group)
         return user
+    
+class TeamMessageForm(forms.ModelForm):
+    class Meta:
+        model = Announcement 
+        fields = ['title', 'body'] 
+        widgets = { 
+            'title': forms.TextInput(attrs={'placeholder': 'Message title'}), 
+            'body': forms.Textarea(attrs={'placeholder': 'Write your message...', 'rows': 4}),
+        }

@@ -33,4 +33,6 @@ urlpatterns = [
     path('my-performance/', views.player_performance, name='player_performance'),
     path('teams/<int:team_id>/performance/', views.team_performance, name='team_performance'),
     path('my-tasks/', views.my_tasks, name='my_tasks'),
+
+    path('teams/<int:team_id>/send-message/', views.send_team_message, name = 'send_team_message'),
 ]

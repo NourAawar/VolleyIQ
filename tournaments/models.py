@@ -284,3 +284,25 @@ class Attendance(models.Model):
 
     def __str__(self):
         return f"{self.player.username} - {self.match} - {self.status}"
+
+class Announcement(models.Model): 
+    title = models.CharField(max_length = 200)
+    body = models.TextField()
+    sender = models.ForeignKey(User, on_delete = models.CASCADE, related_name = 'sent_announcements')
+    team = models.ForeignKey(
+        Team, 
+        null = True, 
+        blank = True, 
+        on_delete = models.CASCADE, 
+        related_name = 'announcements', 
+    )
+    created_at = models.DateTimeField(auto_now_add = True)
+
+    class Meta: 
+        ordering = ['-created_at']
+    
+    def __str__(self): 
+        if self.team: 
+            return f"[{self.team.name}] {self.title}"
+        
+        return f"[System] {self.title}"

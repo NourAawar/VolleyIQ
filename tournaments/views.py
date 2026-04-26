@@ -5,9 +5,9 @@ from .forms import (
     TournamentForm, TeamForm, AssignCoachForm, AddPlayerForm,
     RegisterTeamForm, EditMatchTimeForm, UpdateMatchVenueForm,
     MatchScoreForm, AssignTaskForm, PlayerAvailabilityForm, AttendanceForm,
-    RegistrationForm
+    RegistrationForm, TeamMessageForm
 )
-from .models import Tournament, Team, TeamMembership, Match, Notification, PerformanceStat, Task, PlayerAvailability, Attendance
+from .models import Tournament, Team, TeamMembership, Match, Notification, PerformanceStat, Task, PlayerAvailability, Attendance, Announcement
 from django.forms import modelformset_factory
 from .utils import (
     update_standings, notify_match_coaches,
@@ -771,5 +771,43 @@ def record_attendance(request, match_id):
     return render(request, 'tournaments/record_attendance.html', {
         'formset': formset,
         'match': match,
+        'team': team,
+    })
+
+@login_required
+def send_team_message(request, team_id):
+    if not is_coach(request.user):
+        return HttpResponseForbidden("Only coaches can send team messages.")
+
+    team = get_object_or_404(Team, id = team_id) 
+
+    if team.coach != request.user: 
+        return HttpResponseForbidden("You can only send messages to your own team.")
+
+    if request.method == 'POST': 
+        form = TeamMessageForm(request.POST)
+
+        if form.is_valid(): 
+            announcement = form.save(commit = False) 
+            announcement.sender = request.user  
+            announcement.team = team 
+            announcement.save() 
+            player_ids = team.memberships.values_list('player_id', flat = True) 
+
+            for pid in player_ids:
+                Notification.objects.create( 
+                    user_id = pid, 
+                    message = f"New message from coach {request.user.username}: {announcement.title}" 
+                ) 
+                
+            messages.success(request, "Message sent to team successfully.") 
+
+            return redirect('team_detail', team_id = team.id) 
+        
+    else:
+        form = TeamMessageForm() 
+
+    return render(request, 'tournaments/send_team_message.html', {
+        'form': form,
         'team': team,
     })
