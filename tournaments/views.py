@@ -49,7 +49,7 @@ def home(request):
 
         if is_coach(request.user): 
             coached_teams = Team.objects.filter(coach = request.user)
-            
+
             upcoming_matches = Match.objects.filter( 
                 models.Q(home_team__in = coached_teams) | models.Q(away_team__in = coached_teams),
                 match_date__gte = today,
@@ -934,4 +934,35 @@ def team_announcements(request, team_id):
     return render(request, 'tournaments/team_announcements.html', {
         'team': team,
         'announcements': announcements,
+    })
+
+@login_required
+def my_profile(request): 
+    if not is_player(request.user):
+        return HttpResponseForbidden("Only players can view their profile.")
+
+    memberships = TeamMembership.objects.filter(player = request.user).select_related('team')
+    team_ids = memberships.values_list('team_id', flat = True)
+    today = date.today() 
+
+    next_match = Match.objects.filter( 
+        models.Q(home_team_id__in = team_ids) | models.Q(away_team_id__in = team_ids), 
+        match_date__gte = today
+    ).select_related('home_team', 'away_team', 'tournament').order_by('match_date', 'match_time').first() 
+
+    stats = PerformanceStat.objects.filter(player = request.user).select_related('match', 'team') 
+    totals = stats.aggregate( 
+        kills = Sum('kills'), 
+        assists = Sum('assists'), 
+        blocks = Sum('blocks'), 
+        digs = Sum('digs'), 
+        aces = Sum('aces'), 
+        errors = Sum('errors'),
+    )
+
+    return render(request, 'tournaments/my_profile.html', { 
+        'memberships': memberships, 
+        'next_match': next_match, 
+        'totals': totals, 
+        'stats_count': stats.count(), 
     })

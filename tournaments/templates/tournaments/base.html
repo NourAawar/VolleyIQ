@@ -19,6 +19,7 @@
                 {% for group in user.groups.all %}
                     {% if group.name == 'Player' %}
                         <a href="/my-performance/">My Performance</a>
+                        <a href="/my-profile/">My Profile</a>
                     {% endif %}
                     {% if group.name == 'Club Manager' %}
                         <a href = "/announcements/">Announcements</a>

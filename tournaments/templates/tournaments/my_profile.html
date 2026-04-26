@@ -1,0 +1,96 @@
+{% extends 'tournaments/base.html' %}
+
+{% block title %}My Profile | VolleyIQ{% endblock %}
+
+{% block content %}
+<div class = "card">
+    <h2 style = "margin-top: 0;">{{user.get_full_name|default:user.username}}</h2>
+    <p class = "small-text">{{user.email}}</p>
+
+    <div class = "role-box">
+        <strong>Role:</strong> Player
+    </div>
+</div>
+
+<div style = "display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-top: 16px;">
+    <div class = "card" style = "text-align: center;">
+        <h3 style = "margin: 0 0 8px;">Kills</h3>
+        <p style = "font-size: 2rem; font-weight: 700; margin: 0; color: var(--primary);">{{totals.kills|default:"0" }}</p>
+    </div>
+    <div class = "card" style = "text-align: center;">
+        <h3 style = "margin: 0 0 8px;">Assists</h3>
+        <p style = "font-size: 2rem; font-weight: 700; margin: 0; color: var(--primary);">{{totals.assists|default:"0" }}</p>
+    </div>
+    <div class = "card" style = "text-align: center;">
+        <h3 style = "margin: 0 0 8px;">Blocks</h3>
+        <p style = "font-size: 2rem; font-weight: 700; margin: 0; color: var(--primary);">{{totals.blocks|default:"0" }}</p>
+    </div>
+    <div class = "card" style = "text-align: center;">
+        <h3 style = "margin: 0 0 8px;">Digs</h3>
+        <p style = "font-size: 2rem; font-weight: 700; margin: 0; color: var(--primary);">{{totals.digs|default:"0" }}</p>
+    </div>
+    <div class = "card" style = "text-align: center;">
+        <h3 style = "margin: 0 0 8px;">Aces</h3>
+        <p style = "font-size: 2rem; font-weight: 700; margin: 0; color: var(--primary);">{{totals.aces|default:"0"}}</p>
+    </div>
+    <div class = "card" style = "text-align: center;">
+        <h3 style = "margin: 0 0 8px;">Errors</h3>
+        <p style = "font-size: 2rem; font-weight: 700; margin: 0;color: #c0392b;">{{totals.errors|default:"0"}}</p>
+    </div>
+</div>
+
+<div class = "card table-card" style = "margin-top: 16px;">
+    <h3 style = "margin-top: 0;">My Teams</h3>
+    {% if memberships %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Team</th>
+                    <th>Position</th>
+                    <th>Jersey #</th>
+                    <th>Coach</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for m in memberships %}
+                    <tr>
+                        <td><a href = "/teams/{{m.team.id}}/">{{m.team.name}}</a></td>
+                        <td>
+                            {% if m.position %}
+                                <span class = "badge">{{m.get_position_display}}</span>
+                            {% else %}
+                                <span style = "color:var(--muted)">—</span>
+                            {% endif %}
+                        </td>
+                        <td>{{m.jersey_number|default:"—"}}</td>
+                        <td>{{m.team.coach.get_full_name|default:m.team.coach.username|default:"—"}}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p class = "small-text">You are not on any team yet.</p>
+    {% endif %}
+</div>
+
+{% if next_match %}
+<div class = "card" style = "margin-top: 16px;">
+    <h3 style = "margin-top: 0;">Your Next Match</h3>
+    <div class = "role-box">
+        <p style = "margin: 0 0 4px;"><strong>{{next_match.home_team.name}} vs {{next_match.away_team.name}}</strong></p>
+        <p style = "margin: 0;" class = "small-text">
+            {{next_match.tournament.name}} &middot; {{next_match.match_date}} at {{next_match.match_time}} &middot; {{next_match.venue }}
+        </p>
+    </div>
+</div>
+{% else %}
+<div class = "card" style = "margin-top: 16px;">
+    <p class = "small-text">No upcoming matches scheduled.</p>
+</div>
+{% endif %}
+
+<div class = "form-actions" style = "margin-top: 20px;">
+    <a href = "/my-performance/" class = "btn btn-primary">Full Performance Stats</a>
+    <a href = "/my-tasks/" class = "btn btn-outline">My Tasks</a>
+</div>
+{% endblock %}
