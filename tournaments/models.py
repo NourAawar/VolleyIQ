@@ -106,6 +106,64 @@ class Notification(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     is_read = models.BooleanField(default=False)
 
+
+
     def __str__(self):
         return f"To {self.user.username}: {self.message}"
     
+class PerformanceStat(models.Model):
+    PERIOD_CHOICES = [
+        ('set_1', 'Set 1'),
+        ('set_2', 'Set 2'),
+        ('set_3', 'Set 3'),
+        ('set_4', 'Set 4'),
+        ('set_5', 'Set 5'),
+        ('full_match', 'Full Match'),
+    ]
+
+    match = models.ForeignKey(
+        Match,
+        on_delete=models.CASCADE,
+        related_name='performance_stats'
+    )
+
+    team = models.ForeignKey(
+        Team,
+        on_delete=models.CASCADE,
+        related_name='performance_stats'
+    )
+
+    player = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='performance_stats',
+        null=True,
+        blank=True,
+        limit_choices_to={'groups__name': 'Player'}
+    )
+
+    period = models.CharField(
+        max_length=20,
+        choices=PERIOD_CHOICES,
+        default='full_match'
+    )
+
+    kills = models.PositiveIntegerField(default=0)
+    assists = models.PositiveIntegerField(default=0)
+    blocks = models.PositiveIntegerField(default=0)
+    digs = models.PositiveIntegerField(default=0)
+    aces = models.PositiveIntegerField(default=0)
+    errors = models.PositiveIntegerField(default=0)
+
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-updated_at']
+
+    def total_points(self):
+        return self.kills + self.blocks + self.aces
+
+    def __str__(self):
+        if self.player:
+            return f"{self.player.username} - {self.team.name} - {self.get_period_display()}"
+        return f"{self.team.name} Team Stat - {self.get_period_display()}"

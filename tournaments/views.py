@@ -6,17 +6,24 @@ from .forms import (
     RegisterTeamForm, EditMatchTimeForm, UpdateMatchVenueForm,
     MatchScoreForm
 )
-from .models import Tournament, Team, TeamMembership, Match, Notification
+from .models import Tournament, Team, TeamMembership, Match, Notification, PerformanceStat
 from django.contrib import messages
 from datetime import timedelta, time
-
 from django.db import models
+from django.db.models import Sum
+
 
 def is_coach(user):
     return user.groups.filter(name='Coach').exists()
 
-def is_club_manager(user): 
-    return user.groups.filter(name = 'Club Manager').exists()
+
+def is_player(user):
+    return user.groups.filter(name='Player').exists()
+
+
+def is_club_manager(user):
+    return user.groups.filter(name='Club Manager').exists()
+
 
 def home(request):
     notifications = []
@@ -28,14 +35,15 @@ def home(request):
         'notifications': notifications,
     })
 
+
 @login_required
 def create_tournament(request):
-    if not request.user.groups.filter(name='Club Manager').exists():
+    if not is_club_manager(request.user):
         return HttpResponseForbidden("Only Club Managers can create tournaments.")
 
     if request.method == 'POST':
         form = TournamentForm(request.POST)
-        if form.is_valid(): 
+        if form.is_valid():
             form.save()
             return redirect('tournament_list')
     else:
@@ -43,10 +51,12 @@ def create_tournament(request):
 
     return render(request, 'tournaments/create_tournament.html', {'form': form})
 
+
 @login_required
 def tournament_list(request):
     tournaments = Tournament.objects.all()
     return render(request, 'tournaments/tournament_list.html', {'tournaments': tournaments})
+
 
 @login_required
 def tournament_detail(request, tournament_id):
@@ -71,34 +81,34 @@ def tournament_detail(request, tournament_id):
         'standings': standings,
     })
 
-@login_required
-def register_team(request, tournament_id): 
-    if not is_club_manager(request.user): 
-        return HttpResponseForbidden("Only Club Managers can register teams.")
-    
-    tournament = get_object_or_404(Tournament, id = tournament_id)
 
-    if request.method == 'POST': 
-        form = RegisterTeamForm(request.POST, tournament = tournament)
-        if form.is_valid(): 
+@login_required
+def register_team(request, tournament_id):
+    if not is_club_manager(request.user):
+        return HttpResponseForbidden("Only Club Managers can register teams.")
+
+    tournament = get_object_or_404(Tournament, id=tournament_id)
+
+    if request.method == 'POST':
+        form = RegisterTeamForm(request.POST, tournament=tournament)
+        if form.is_valid():
             team = form.cleaned_data['team']
             tournament.teams.add(team)
+            return redirect('tournament_detail', tournament_id=tournament.id)
+    else:
+        form = RegisterTeamForm(tournament=tournament)
 
-            return redirect('tournament_detail', tournament_id = tournament.id)
-    
-    else: 
-        form = RegisterTeamForm(tournament = tournament)
-    
     return render(request, 'tournaments/register_team.html', {
-        'form': form, 
-        'tournament': tournament, 
+        'form': form,
+        'tournament': tournament,
     })
 
-@login_required 
-def remove_team(request, tournament_id, team_id): 
-    if not is_club_manager(request.user): 
+
+@login_required
+def remove_team(request, tournament_id, team_id):
+    if not is_club_manager(request.user):
         return HttpResponseForbidden("Only Club Managers can remove teams.")
-    
+
     tournament = get_object_or_404(Tournament, id=tournament_id)
     team = get_object_or_404(Team, id=team_id)
 
@@ -110,46 +120,46 @@ def remove_team(request, tournament_id, team_id):
         messages.error(request, "Cannot remove a team after the schedule has been generated.")
         return redirect('tournament_detail', tournament_id=tournament.id)
 
-    if request.method == 'POST': 
+    if request.method == 'POST':
         tournament.teams.remove(team)
         messages.success(request, "Team removed from tournament successfully.")
         return redirect('tournament_detail', tournament_id=tournament.id)
-    
+
     return render(request, 'tournaments/confirm_remove_team.html', {
         'tournament': tournament,
         'team': team,
     })
 
-@login_required 
-def team_list(request): 
-    teams = Team.objects.all()
 
+@login_required
+def team_list(request):
+    teams = Team.objects.all()
     return render(request, 'tournaments/team_list.html', {'teams': teams})
 
-@login_required 
-def create_team(request): 
-    if not is_club_manager(request.user): 
-        return HttpResponseForbidden("Only Club Managers can create teams.")
-    
-    if request.method == 'POST': 
-        form = TeamForm(request.POST)
-        if form.is_valid(): 
-            form.save()
 
+@login_required
+def create_team(request):
+    if not is_club_manager(request.user):
+        return HttpResponseForbidden("Only Club Managers can create teams.")
+
+    if request.method == 'POST':
+        form = TeamForm(request.POST)
+        if form.is_valid():
+            form.save()
             return redirect('team_list')
-    
-    else: 
+    else:
         form = TeamForm()
 
     return render(request, 'tournaments/create_team.html', {'form': form})
 
-@login_required 
-def team_detail(request, team_id): 
-    team = get_object_or_404(Team, id = team_id)
+
+@login_required
+def team_detail(request, team_id):
+    team = get_object_or_404(Team, id=team_id)
     memberships = team.memberships.select_related('player')
 
     matches = Match.objects.filter(
-    models.Q(home_team=team) | models.Q(away_team=team)
+        models.Q(home_team=team) | models.Q(away_team=team)
     ).order_by('-match_date')
 
     last_matches = matches[:3]
@@ -164,12 +174,11 @@ def team_detail(request, team_id):
         else:
             trend.append("W" if m.away_score > m.home_score else "L")
 
-    trend = trend[::-1]  # chronological order
+    trend = trend[::-1]
 
     wins_count = trend.count("W")
     losses_count = trend.count("L")
 
-    performance = 0
     if not trend:
         performance = "No data yet"
     elif wins_count > losses_count:
@@ -180,67 +189,75 @@ def team_detail(request, team_id):
         performance = "Stable ➖"
 
     return render(request, 'tournaments/team_detail.html', {
-    'team': team,
-    'memberships': memberships,
-    'matches': matches,
-    'trend': trend,
-    'performance': performance
+        'team': team,
+        'memberships': memberships,
+        'matches': matches,
+        'trend': trend,
+        'performance': performance,
     })
 
-@login_required 
-def assign_coach(request, team_id): 
-    if not is_club_manager(request.user): 
+
+@login_required
+def assign_coach(request, team_id):
+    if not is_club_manager(request.user):
         return HttpResponseForbidden("Only Club Managers can assign coaches.")
-    
-    team = get_object_or_404(Team, id = team_id)
 
-    if request.method == 'POST': 
-        form = AssignCoachForm(request.POST, instance = team)
-        if form.is_valid(): 
+    team = get_object_or_404(Team, id=team_id)
+
+    if request.method == 'POST':
+        form = AssignCoachForm(request.POST, instance=team)
+        if form.is_valid():
             form.save()
+            return redirect('team_detail', team_id=team.id)
+    else:
+        form = AssignCoachForm(instance=team)
 
-            return redirect('team_detail', team_id = team.id)
-        
-    else: 
-        form = AssignCoachForm(instance = team)
-        
-    return render(request, 'tournaments/assign_coach.html', {'form': form, 'team': team})
+    return render(request, 'tournaments/assign_coach.html', {
+        'form': form,
+        'team': team
+    })
 
-@login_required 
-def add_player(request, team_id): 
-    if not is_club_manager(request.user): 
+
+@login_required
+def add_player(request, team_id):
+    if not is_club_manager(request.user):
         return HttpResponseForbidden("Only Club Managers can add players.")
-    
-    team = get_object_or_404(Team, id = team_id)
 
-    if request.method == 'POST': 
-        form = AddPlayerForm(request.POST, team = team)
-        if form.is_valid(): 
-            membership = form.save(commit = False)
-            membership.team = team 
+    team = get_object_or_404(Team, id=team_id)
+
+    if request.method == 'POST':
+        form = AddPlayerForm(request.POST, team=team)
+        if form.is_valid():
+            membership = form.save(commit=False)
+            membership.team = team
             membership.save()
+            return redirect('team_detail', team_id=team.id)
+    else:
+        form = AddPlayerForm(team=team)
 
-            return redirect('team_detail', team_id = team.id)
-    
-    else: 
-        form = AddPlayerForm(team = team)
+    return render(request, 'tournaments/add_player.html', {
+        'form': form,
+        'team': team
+    })
 
-    return render(request, 'tournaments/add_player.html', {'form': form, 'team': team})
 
-@login_required 
-def remove_player(request, team_id, membership_id): 
-    if not is_club_manager(request.user): 
+@login_required
+def remove_player(request, team_id, membership_id):
+    if not is_club_manager(request.user):
         return HttpResponseForbidden("Only Club Managers can remove players.")
-    
-    team = get_object_or_404(Team, id = team_id)
-    membership = get_object_or_404(TeamMembership, id = membership_id, team = team)
 
-    if request.method == 'POST': 
+    team = get_object_or_404(Team, id=team_id)
+    membership = get_object_or_404(TeamMembership, id=membership_id, team=team)
+
+    if request.method == 'POST':
         membership.delete()
+        return redirect('team_detail', team_id=team.id)
 
-        return redirect('team_detail', team_id = team.id)
-    
-    return render(request, 'tournaments/confirm_remove_player.html', {'team': team, 'membership': membership,})
+    return render(request, 'tournaments/confirm_remove_player.html', {
+        'team': team,
+        'membership': membership,
+    })
+
 
 @login_required
 def edit_match_time(request, match_id):
@@ -262,6 +279,7 @@ def edit_match_time(request, match_id):
         'form': form,
         'match': match,
     })
+
 
 @login_required
 def update_match_venue(request, match_id):
@@ -300,6 +318,7 @@ def update_match_venue(request, match_id):
         'match': match,
     })
 
+
 @login_required
 def team_match_schedule(request, team_id):
     team = get_object_or_404(Team, id=team_id)
@@ -315,6 +334,89 @@ def team_match_schedule(request, team_id):
         'team': team,
         'matches': matches,
     })
+
+
+@login_required
+def player_performance(request):
+    if not is_player(request.user):
+        return HttpResponseForbidden("Only players can view individual performance.")
+
+    stats = PerformanceStat.objects.filter(
+        player=request.user
+    ).select_related('match', 'team').order_by('match__match_date', 'updated_at')
+
+    totals = stats.aggregate(
+        kills=Sum('kills'),
+        assists=Sum('assists'),
+        blocks=Sum('blocks'),
+        digs=Sum('digs'),
+        aces=Sum('aces'),
+        errors=Sum('errors'),
+    )
+
+    return render(request, 'tournaments/player_performance.html', {
+        'stats': stats,
+        'totals': totals,
+    })
+
+
+@login_required
+def team_performance(request, team_id):
+    team = get_object_or_404(Team, id=team_id)
+
+    if not is_coach(request.user) or team.coach != request.user:
+        return HttpResponseForbidden("You can only view performance for your own team.")
+
+    selected_period = request.GET.get('period', '')
+    selected_metric = request.GET.get('metric', '')
+
+    allowed_metrics = {
+        'kills': 'Kills',
+        'assists': 'Assists',
+        'blocks': 'Blocks',
+        'digs': 'Digs',
+        'aces': 'Aces',
+        'errors': 'Errors',
+    }
+
+    stats = PerformanceStat.objects.filter(team=team).select_related(
+        'match',
+        'player',
+        'team'
+    )
+
+    if selected_period:
+        stats = stats.filter(period=selected_period)
+
+    totals = stats.aggregate(
+        kills=Sum('kills'),
+        assists=Sum('assists'),
+        blocks=Sum('blocks'),
+        digs=Sum('digs'),
+        aces=Sum('aces'),
+        errors=Sum('errors'),
+    )
+
+    metric_total = None
+    selected_metric_label = None
+
+    if selected_metric in allowed_metrics:
+        metric_total = stats.aggregate(total=Sum(selected_metric))['total'] or 0
+        selected_metric_label = allowed_metrics[selected_metric]
+
+    stats = stats.order_by('match__match_date', 'updated_at')
+
+    return render(request, 'tournaments/team_performance.html', {
+        'team': team,
+        'stats': stats,
+        'totals': totals,
+        'selected_period': selected_period,
+        'selected_metric': selected_metric,
+        'selected_metric_label': selected_metric_label,
+        'metric_total': metric_total,
+        'period_choices': PerformanceStat.PERIOD_CHOICES,
+    })
+
 
 @login_required
 def generate_schedule(request, tournament_id):
@@ -337,7 +439,7 @@ def generate_schedule(request, tournament_id):
         return redirect('tournament_detail', tournament_id=tournament.id)
 
     current_date = tournament.start_date
-    default_time = time(18, 0)  # 6:00 PM
+    default_time = time(18, 0)
     default_venue = "Main Court"
 
     for i in range(len(teams)):
@@ -358,6 +460,7 @@ def generate_schedule(request, tournament_id):
 
     messages.success(request, "Tournament schedule generated successfully.")
     return redirect('tournament_detail', tournament_id=tournament.id)
+
 
 @login_required
 def update_match_score(request, match_id):

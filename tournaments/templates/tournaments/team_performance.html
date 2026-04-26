@@ -1,0 +1,211 @@
+{% extends 'tournaments/base.html' %}
+
+{% block title %}Team Performance | VolleyIQ{% endblock %}
+
+{% block content %}
+<div class="card table-card">
+    <h2>{{ team.name }} Performance Trends</h2>
+    <p class="small-text">Analyze team performance by period and selected metric.</p>
+
+    <form method="get" class="form-actions" style="margin-bottom:20px;">
+        <div>
+            <label>Match Period</label>
+            <select name="period">
+                <option value="">All periods</option>
+                {% for value, label in period_choices %}
+                    <option value="{{ value }}" {% if selected_period == value %}selected{% endif %}>
+                        {{ label }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div>
+            <label>Metric</label>
+            <select name="metric">
+                <option value="">All metrics</option>
+                <option value="kills" {% if selected_metric == 'kills' %}selected{% endif %}>Kills</option>
+                <option value="assists" {% if selected_metric == 'assists' %}selected{% endif %}>Assists</option>
+                <option value="blocks" {% if selected_metric == 'blocks' %}selected{% endif %}>Blocks</option>
+                <option value="digs" {% if selected_metric == 'digs' %}selected{% endif %}>Digs</option>
+                <option value="aces" {% if selected_metric == 'aces' %}selected{% endif %}>Aces</option>
+                <option value="errors" {% if selected_metric == 'errors' %}selected{% endif %}>Errors</option>
+            </select>
+        </div>
+
+        <button type="submit" class="btn btn-primary">Apply Filter</button>
+        <a href="/teams/{{ team.id }}/performance/" class="btn btn-outline">Clear</a>
+    </form>
+
+    <div class="role-box">
+        {% if selected_metric %}
+            <strong>{{ selected_metric_label }} Total:</strong> {{ metric_total }}
+        {% else %}
+            <strong>Kills:</strong> {{ totals.kills|default:0 }} |
+            <strong>Assists:</strong> {{ totals.assists|default:0 }} |
+            <strong>Blocks:</strong> {{ totals.blocks|default:0 }} |
+            <strong>Digs:</strong> {{ totals.digs|default:0 }} |
+            <strong>Aces:</strong> {{ totals.aces|default:0 }} |
+            <strong>Errors:</strong> {{ totals.errors|default:0 }}
+        {% endif %}
+    </div>
+
+    {% if stats %}
+        <div
+            id="teamChartData"
+            data-selected-metric="{{ selected_metric }}"
+            data-selected-metric-label="{{ selected_metric_label|default:'All Metrics' }}"
+            data-kills="{{ totals.kills|default:0 }}"
+            data-assists="{{ totals.assists|default:0 }}"
+            data-blocks="{{ totals.blocks|default:0 }}"
+            data-digs="{{ totals.digs|default:0 }}"
+            data-aces="{{ totals.aces|default:0 }}"
+            data-errors="{{ totals.errors|default:0 }}"
+        ></div>
+
+        <div class="card" style="margin-top:20px;">
+            <h3>{% if selected_metric %}{{ selected_metric_label }} Trend{% else %}Team Performance Summary{% endif %}</h3>
+            <canvas id="teamMainChart"></canvas>
+        </div>
+    {% endif %}
+
+    <table>
+        <thead>
+            <tr>
+                <th>Match</th>
+                <th>Player</th>
+                <th>Period</th>
+                <th>Kills</th>
+                <th>Assists</th>
+                <th>Blocks</th>
+                <th>Digs</th>
+                <th>Aces</th>
+                <th>Errors</th>
+                <th>Updated</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for stat in stats %}
+                <tr
+                    data-label="Record {{ forloop.counter }} - {{ stat.get_period_display }}"
+                    data-kills="{{ stat.kills }}"
+                    data-assists="{{ stat.assists }}"
+                    data-blocks="{{ stat.blocks }}"
+                    data-digs="{{ stat.digs }}"
+                    data-aces="{{ stat.aces }}"
+                    data-errors="{{ stat.errors }}"
+                >
+                    <td>{{ stat.match.home_team.name }} vs {{ stat.match.away_team.name }}</td>
+                    <td>
+                        {% if stat.player %}
+                            {{ stat.player.get_full_name|default:stat.player.username }}
+                        {% else %}
+                            Team Stat
+                        {% endif %}
+                    </td>
+                    <td>{{ stat.get_period_display }}</td>
+                    <td>{{ stat.kills }}</td>
+                    <td>{{ stat.assists }}</td>
+                    <td>{{ stat.blocks }}</td>
+                    <td>{{ stat.digs }}</td>
+                    <td>{{ stat.aces }}</td>
+                    <td>{{ stat.errors }}</td>
+                    <td>{{ stat.updated_at|date:"M d, Y H:i" }}</td>
+                </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="10">No performance data found.</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div class="form-actions" style="margin-top:20px;">
+    <a href="/teams/{{ team.id }}/" class="btn btn-outline">Back to Team</a>
+</div>
+
+{% if stats %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    const teamRows = document.querySelectorAll('tr[data-label]');
+    const chartData = document.getElementById('teamChartData');
+
+    const selectedMetric = chartData.dataset.selectedMetric;
+    const selectedMetricLabel = chartData.dataset.selectedMetricLabel;
+
+    const labels = Array.from(teamRows).map(function(row) {
+        return row.dataset.label;
+    });
+
+    function metricValues(metricName) {
+        return Array.from(teamRows).map(function(row) {
+            return Number(row.dataset[metricName]);
+        });
+    }
+
+    const totals = [
+        Number(chartData.dataset.kills),
+        Number(chartData.dataset.assists),
+        Number(chartData.dataset.blocks),
+        Number(chartData.dataset.digs),
+        Number(chartData.dataset.aces),
+        Number(chartData.dataset.errors)
+    ];
+
+    if (selectedMetric) {
+        new Chart(document.getElementById('teamMainChart'), {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: selectedMetricLabel,
+                        data: metricValues(selectedMetric)
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { position: 'bottom' },
+                    title: {
+                        display: true,
+                        text: selectedMetricLabel + ' Trend'
+                    }
+                },
+                scales: {
+                    y: { beginAtZero: true }
+                }
+            }
+        });
+    } else {
+        new Chart(document.getElementById('teamMainChart'), {
+            type: 'bar',
+            data: {
+                labels: ['Kills', 'Assists', 'Blocks', 'Digs', 'Aces', 'Errors'],
+                datasets: [
+                    {
+                        label: 'Team Totals',
+                        data: totals
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { position: 'bottom' },
+                    title: {
+                        display: true,
+                        text: 'Team Performance Totals'
+                    }
+                },
+                scales: {
+                    y: { beginAtZero: true }
+                }
+            }
+        });
+    }
+</script>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,121 @@
+{% extends 'tournaments/base.html' %}
+
+{% block title %}My Performance | VolleyIQ{% endblock %}
+
+{% block content %}
+<div class="card table-card">
+    <h2>My Performance Statistics</h2>
+
+    <div class="role-box">
+        <strong>Total Kills:</strong> {{ totals.kills|default:0 }} |
+        <strong>Assists:</strong> {{ totals.assists|default:0 }} |
+        <strong>Blocks:</strong> {{ totals.blocks|default:0 }} |
+        <strong>Digs:</strong> {{ totals.digs|default:0 }} |
+        <strong>Aces:</strong> {{ totals.aces|default:0 }} |
+        <strong>Errors:</strong> {{ totals.errors|default:0 }}
+    </div>
+
+    {% if stats %}
+        <div class="card" style="margin-top:20px;">
+            <h3>Performance Trend</h3>
+            <canvas id="playerPerformanceChart"></canvas>
+        </div>
+    {% endif %}
+
+    <table>
+        <thead>
+            <tr>
+                <th>Match</th>
+                <th>Team</th>
+                <th>Period</th>
+                <th>Kills</th>
+                <th>Assists</th>
+                <th>Blocks</th>
+                <th>Digs</th>
+                <th>Aces</th>
+                <th>Errors</th>
+                <th>Updated</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for stat in stats %}
+                <tr
+                    data-label="Match {{ forloop.counter }} - {{ stat.get_period_display }}"
+                    data-kills="{{ stat.kills }}"
+                    data-assists="{{ stat.assists }}"
+                    data-blocks="{{ stat.blocks }}"
+                    data-digs="{{ stat.digs }}"
+                >
+                    <td>{{ stat.match.home_team.name }} vs {{ stat.match.away_team.name }}</td>
+                    <td>{{ stat.team.name }}</td>
+                    <td>{{ stat.get_period_display }}</td>
+                    <td>{{ stat.kills }}</td>
+                    <td>{{ stat.assists }}</td>
+                    <td>{{ stat.blocks }}</td>
+                    <td>{{ stat.digs }}</td>
+                    <td>{{ stat.aces }}</td>
+                    <td>{{ stat.errors }}</td>
+                    <td>{{ stat.updated_at|date:"M d, Y H:i" }}</td>
+                </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="10">No performance statistics available yet.</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% if stats %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    const playerRows = document.querySelectorAll('tr[data-label]');
+
+    const playerLabels = Array.from(playerRows).map(function(row) {
+        return row.dataset.label;
+    });
+
+    const playerKills = Array.from(playerRows).map(function(row) {
+        return Number(row.dataset.kills);
+    });
+
+    const playerAssists = Array.from(playerRows).map(function(row) {
+        return Number(row.dataset.assists);
+    });
+
+    const playerBlocks = Array.from(playerRows).map(function(row) {
+        return Number(row.dataset.blocks);
+    });
+
+    const playerDigs = Array.from(playerRows).map(function(row) {
+        return Number(row.dataset.digs);
+    });
+
+    new Chart(document.getElementById('playerPerformanceChart'), {
+        type: 'line',
+        data: {
+            labels: playerLabels,
+            datasets: [
+                { label: 'Kills', data: playerKills },
+                { label: 'Assists', data: playerAssists },
+                { label: 'Blocks', data: playerBlocks },
+                { label: 'Digs', data: playerDigs }
+            ]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { position: 'bottom' },
+                title: {
+                    display: true,
+                    text: 'Player Performance Over Time'
+                }
+            },
+            scales: {
+                y: { beginAtZero: true }
+            }
+        }
+    });
+</script>
+{% endif %}
+{% endblock %}

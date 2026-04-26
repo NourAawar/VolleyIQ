@@ -14,10 +14,17 @@
             <a href="/">Home</a>
             <a href="/list/">Tournaments</a>
             <a href="/teams/">Teams</a>
+
             {% if user.is_authenticated %}
+                {% for group in user.groups.all %}
+                    {% if group.name == 'Player' %}
+                        <a href="/my-performance/">My Performance</a>
+                    {% endif %}
+                {% endfor %}
+
                 <form action="/accounts/logout/" method="post" style="display:inline;">
-                     {% csrf_token %}
-                     <button type="submit" class="btn btn-outline">Logout</button>
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-outline">Logout</button>
                 </form>
             {% else %}
                 <a href="/accounts/login/">Login</a>
