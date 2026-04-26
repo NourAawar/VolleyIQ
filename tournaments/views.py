@@ -1,12 +1,12 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.models import User
+from django.contrib.auth.models import User, Group
 from django.http import HttpResponseForbidden
 from .forms import (
     TournamentForm, TeamForm, AssignCoachForm, AddPlayerForm,
     RegisterTeamForm, EditMatchTimeForm, UpdateMatchVenueForm,
     MatchScoreForm, AssignTaskForm, PlayerAvailabilityForm, AttendanceForm,
-    RegistrationForm, TeamMessageForm, AnnouncementForm
+    RegistrationForm, CreatePlayerForm, TeamMessageForm, AnnouncementForm
 )
 from .models import Tournament, Team, TeamMembership, Match, Notification, PerformanceStat, Task, PlayerAvailability, Attendance, Announcement
 from django.forms import modelformset_factory
@@ -37,69 +37,69 @@ def home(request):
     notifications = []
     player_teams = []
     upcoming_matches = []
-    availability_gaps = [] 
+    availability_gaps = []
     teams_without_coach = []
-    pending_tournaments = [] 
-    next_match = None 
+    pending_tournaments = []
+    next_match = None
     stats_totals = None
 
     if request.user.is_authenticated:
         notifications = request.user.notifications.order_by('-created_at')[:5]
         today = date.today()
 
-        if is_coach(request.user): 
-            coached_teams = Team.objects.filter(coach = request.user)
+        if is_coach(request.user):
+            coached_teams = Team.objects.filter(coach=request.user)
 
-            upcoming_matches = Match.objects.filter( 
-                models.Q(home_team__in = coached_teams) | models.Q(away_team__in = coached_teams),
-                match_date__gte = today,
-                match_date__lte = today + timedelta(days = 7)
-            ).select_related('home_team', 'away_team', 'tournament').order_by('match_date', 'match_time') 
-
-            availability_gaps = PlayerAvailability.objects.filter( 
-                match__in = upcoming_matches,
-                status = 'unavailable' 
-            ).select_related('player', 'match') 
-
-        elif is_club_manager(request.user): 
             upcoming_matches = Match.objects.filter(
-                match_date__gte = today,
-                match_date__lte = today + timedelta(days = 7) 
+                models.Q(home_team__in=coached_teams) | models.Q(away_team__in=coached_teams),
+                match_date__gte=today,
+                match_date__lte=today + timedelta(days=7)
             ).select_related('home_team', 'away_team', 'tournament').order_by('match_date', 'match_time')
 
-            teams_without_coach = Team.objects.filter(coach__isnull = True)
+            availability_gaps = PlayerAvailability.objects.filter(
+                match__in=upcoming_matches,
+                status='unavailable'
+            ).select_related('player', 'match')
 
-            pending_tournaments = Tournament.objects.filter(start_date__gt = today) 
+        elif is_club_manager(request.user):
+            upcoming_matches = Match.objects.filter(
+                match_date__gte=today,
+                match_date__lte=today + timedelta(days=7)
+            ).select_related('home_team', 'away_team', 'tournament').order_by('match_date', 'match_time')
 
-        elif is_player(request.user): 
-            player_teams = Team.objects.filter(memberships__player = request.user)
+            teams_without_coach = Team.objects.filter(coach__isnull=True)
 
-            team_ids = list(player_teams.values_list('id', flat = True))
+            pending_tournaments = Tournament.objects.filter(start_date__gt=today)
 
-            next_match = Match.objects.filter( 
-                models.Q(home_team_id__in = team_ids) | models.Q(away_team_id__in = team_ids),
-                match_date__gte = today
-            ).select_related('home_team', 'away_team', 'tournament').order_by('match_date', 'match_time').first() 
+        elif is_player(request.user):
+            player_teams = Team.objects.filter(memberships__player=request.user)
 
-            stats_totals = PerformanceStat.objects.filter(player = request.user).aggregate( 
-                kills = Sum('kills'),
-                assists = Sum('assists'),
-                blocks = Sum('blocks'),
-                aces = Sum('aces'),
+            team_ids = list(player_teams.values_list('id', flat=True))
+
+            next_match = Match.objects.filter(
+                models.Q(home_team_id__in=team_ids) | models.Q(away_team_id__in=team_ids),
+                match_date__gte=today
+            ).select_related('home_team', 'away_team', 'tournament').order_by('match_date', 'match_time').first()
+
+            stats_totals = PerformanceStat.objects.filter(player=request.user).aggregate(
+                kills=Sum('kills'),
+                assists=Sum('assists'),
+                blocks=Sum('blocks'),
+                aces=Sum('aces'),
             )
 
-    unread_count = request.user.notifications.filter(is_read = False).count() if request.user.is_authenticated else 0
+    unread_count = request.user.notifications.filter(is_read=False).count() if request.user.is_authenticated else 0
 
-    return render(request, 'tournaments/home.html', { 
+    return render(request, 'tournaments/home.html', {
         'notifications': notifications,
-        'player_teams': player_teams, 
-        'upcoming_matches': upcoming_matches, 
-        'availability_gaps': availability_gaps, 
-        'teams_without_coach': teams_without_coach, 
-        'pending_tournaments': pending_tournaments, 
-        'next_match': next_match, 
-        'stats_totals': stats_totals, 
-        'unread_count': unread_count, 
+        'player_teams': player_teams,
+        'upcoming_matches': upcoming_matches,
+        'availability_gaps': availability_gaps,
+        'teams_without_coach': teams_without_coach,
+        'pending_tournaments': pending_tournaments,
+        'next_match': next_match,
+        'stats_totals': stats_totals,
+        'unread_count': unread_count,
     })
 
 
@@ -259,6 +259,28 @@ def create_team(request):
 
 
 @login_required
+def delete_team(request, team_id):
+    if not is_club_manager(request.user):
+        return HttpResponseForbidden("Only Club Managers can delete teams.")
+
+    team = get_object_or_404(Team, id=team_id)
+    match_count = Match.objects.filter(
+        models.Q(home_team=team) | models.Q(away_team=team)
+    ).count()
+
+    if request.method == 'POST':
+        team_name = team.name
+        team.delete()
+        messages.success(request, f"Team '{team_name}' has been deleted.")
+        return redirect('team_list')
+
+    return render(request, 'tournaments/confirm_delete_team.html', {
+        'team': team,
+        'match_count': match_count,
+    })
+
+
+@login_required
 def team_detail(request, team_id):
     team = get_object_or_404(Team, id=team_id)
     memberships = team.memberships.select_related('player')
@@ -287,11 +309,11 @@ def team_detail(request, team_id):
     if not trend:
         performance = "No data yet"
     elif wins_count > losses_count:
-        performance = "Improving 📈"
+        performance = "Improving"
     elif losses_count > wins_count:
-        performance = "Declining 📉"
+        performance = "Declining"
     else:
-        performance = "Stable ➖"
+        performance = "Stable"
 
     return render(request, 'tournaments/team_detail.html', {
         'team': team,
@@ -342,7 +364,8 @@ def add_player(request, team_id):
 
     return render(request, 'tournaments/add_player.html', {
         'form': form,
-        'team': team
+        'team': team,
+        'has_players': form.fields['player'].queryset.exists(),
     })
 
 
@@ -361,6 +384,44 @@ def remove_player(request, team_id, membership_id):
     return render(request, 'tournaments/confirm_remove_player.html', {
         'team': team,
         'membership': membership,
+    })
+
+
+@login_required
+def player_list(request):
+    if not is_club_manager(request.user) and not is_coach(request.user):
+        return HttpResponseForbidden("Only managers and coaches can view the player list.")
+
+    try:
+        player_group = Group.objects.get(name='Player')
+        players = User.objects.filter(groups=player_group).prefetch_related('team_memberships__team').order_by('last_name', 'first_name', 'username')
+    except Group.DoesNotExist:
+        players = User.objects.none()
+
+    return render(request, 'tournaments/player_list.html', {'players': players})
+
+
+@login_required
+def create_player(request):
+    if not is_club_manager(request.user):
+        return HttpResponseForbidden("Only Club Managers can create player accounts.")
+
+    team_id = request.GET.get('team_id') or request.POST.get('team_id')
+
+    if request.method == 'POST':
+        form = CreatePlayerForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f"Player account created successfully. They can now be added to a team.")
+            if team_id:
+                return redirect('add_player', team_id=team_id)
+            return redirect('player_list')
+    else:
+        form = CreatePlayerForm()
+
+    return render(request, 'tournaments/create_player.html', {
+        'form': form,
+        'team_id': team_id,
     })
 
 
@@ -561,22 +622,15 @@ def generate_schedule(request, tournament_id):
                     current_date = tournament.start_date
 
     elif fmt == 'single_elimination':
-        if len(teams) < 2:
-            messages.error(request, "At least 2 teams required for elimination.")
-            return redirect('tournament_detail', tournament_id=tournament.id)
         generate_single_elimination(tournament, teams, tournament.start_date)
 
     elif fmt == 'double_elimination':
-        if len(teams) < 2:
-            messages.error(request, "At least 2 teams required for elimination.")
-            return redirect('tournament_detail', tournament_id=tournament.id)
         generate_double_elimination(tournament, teams, tournament.start_date)
 
     else:
         messages.error(request, "Unknown tournament format.")
         return redirect('tournament_detail', tournament_id=tournament.id)
 
-    # Notify all team coaches in this tournament
     notified = set()
     for team in teams:
         if team.coach and team.coach.id not in notified:
@@ -834,106 +888,103 @@ def record_attendance(request, match_id):
         'team': team,
     })
 
+
 @login_required
 def send_team_message(request, team_id):
     if not is_coach(request.user):
         return HttpResponseForbidden("Only coaches can send team messages.")
 
-    team = get_object_or_404(Team, id = team_id) 
+    team = get_object_or_404(Team, id=team_id)
 
-    if team.coach != request.user: 
+    if team.coach != request.user:
         return HttpResponseForbidden("You can only send messages to your own team.")
 
-    if request.method == 'POST': 
+    if request.method == 'POST':
         form = TeamMessageForm(request.POST)
 
-        if form.is_valid(): 
-            announcement = form.save(commit = False) 
-            announcement.sender = request.user  
-            announcement.team = team 
-            announcement.save() 
-            player_ids = team.memberships.values_list('player_id', flat = True) 
+        if form.is_valid():
+            announcement = form.save(commit=False)
+            announcement.sender = request.user
+            announcement.team = team
+            announcement.save()
+            player_ids = team.memberships.values_list('player_id', flat=True)
 
             for pid in player_ids:
-                Notification.objects.create( 
-                    user_id = pid, 
-                    message = f"New message from coach {request.user.username}: {announcement.title}", 
-                    announcement = announcement,
-                ) 
+                Notification.objects.create(
+                    user_id=pid,
+                    message=f"New message from coach {request.user.username}: {announcement.title}",
+                )
 
-            messages.success(request, "Message sent to team successfully.") 
+            messages.success(request, "Message sent to team successfully.")
+            return redirect('team_announcements', team_id=team.id)
 
-            return redirect('team_announcements', team_id = team.id) 
-        
     else:
-        form = TeamMessageForm() 
+        form = TeamMessageForm()
 
     return render(request, 'tournaments/send_team_message.html', {
         'form': form,
         'team': team,
     })
 
+
 @login_required
 def send_announcement(request):
     if not is_club_manager(request.user):
         return HttpResponseForbidden("Only Club Managers can send system-wide announcements.")
 
-    if request.method == 'POST': 
+    if request.method == 'POST':
         form = AnnouncementForm(request.POST)
-        if form.is_valid(): 
-            announcement = form.save(commit = False)
+        if form.is_valid():
+            announcement = form.save(commit=False)
             announcement.sender = request.user
             announcement.team = None
-            announcement.save() 
+            announcement.save()
 
-            for user in User.objects.exclude(id = request.user.id):
-                Notification.objects.create( 
-                    user = user,
-                    message = f"System announcement: {announcement.title}", 
-                    announcement = announcement, 
+            for user in User.objects.exclude(id=request.user.id):
+                Notification.objects.create(
+                    user=user,
+                    message=f"System announcement: {announcement.title}",
                 )
 
             messages.success(request, "Announcement sent to all users.")
-
-            return redirect('team_announcements_all') 
+            return redirect('team_announcements_all')
     else:
         form = AnnouncementForm()
 
     return render(request, 'tournaments/send_announcement.html', {
-        'form': form, 
+        'form': form,
     })
 
+
 @login_required
-def team_announcements_all(request): 
-    if not is_club_manager(request.user): 
+def team_announcements_all(request):
+    if not is_club_manager(request.user):
         return HttpResponseForbidden("Only Club Managers can view all announcements.")
 
     announcements = Announcement.objects.select_related('sender', 'team').all()
 
     return render(request, 'tournaments/team_announcements_all.html', {
-        'announcements': announcements, 
+        'announcements': announcements,
     })
+
 
 @login_required
 def team_announcements(request, team_id):
-    team = get_object_or_404(Team, id = team_id)
+    team = get_object_or_404(Team, id=team_id)
 
     if is_club_manager(request.user):
         pass
-
     elif is_coach(request.user):
         if team.coach != request.user:
             return HttpResponseForbidden("You can only view announcements for your own team.")
-        
     elif is_player(request.user):
-        if not team.memberships.filter(player = request.user).exists():
+        if not team.memberships.filter(player=request.user).exists():
             return HttpResponseForbidden("You can only view announcements for teams you are on.")
-        
     else:
         return HttpResponseForbidden("Access denied.")
 
     announcements = Announcement.objects.filter(
-        models.Q(team = team) | models.Q(team__isnull = True)
+        models.Q(team=team) | models.Q(team__isnull=True)
     ).select_related('sender', 'team')
 
     return render(request, 'tournaments/team_announcements.html', {
@@ -941,50 +992,53 @@ def team_announcements(request, team_id):
         'announcements': announcements,
     })
 
+
 @login_required
-def my_profile(request): 
+def my_profile(request):
     if not is_player(request.user):
         return HttpResponseForbidden("Only players can view their profile.")
 
-    memberships = TeamMembership.objects.filter(player = request.user).select_related('team')
-    team_ids = memberships.values_list('team_id', flat = True)
-    today = date.today() 
+    memberships = TeamMembership.objects.filter(player=request.user).select_related('team')
+    team_ids = memberships.values_list('team_id', flat=True)
+    today = date.today()
 
-    next_match = Match.objects.filter( 
-        models.Q(home_team_id__in = team_ids) | models.Q(away_team_id__in = team_ids), 
-        match_date__gte = today
-    ).select_related('home_team', 'away_team', 'tournament').order_by('match_date', 'match_time').first() 
+    next_match = Match.objects.filter(
+        models.Q(home_team_id__in=team_ids) | models.Q(away_team_id__in=team_ids),
+        match_date__gte=today
+    ).select_related('home_team', 'away_team', 'tournament').order_by('match_date', 'match_time').first()
 
-    stats = PerformanceStat.objects.filter(player = request.user).select_related('match', 'team') 
-    totals = stats.aggregate( 
-        kills = Sum('kills'), 
-        assists = Sum('assists'), 
-        blocks = Sum('blocks'), 
-        digs = Sum('digs'), 
-        aces = Sum('aces'), 
-        errors = Sum('errors'),
+    stats = PerformanceStat.objects.filter(player=request.user).select_related('match', 'team')
+    totals = stats.aggregate(
+        kills=Sum('kills'),
+        assists=Sum('assists'),
+        blocks=Sum('blocks'),
+        digs=Sum('digs'),
+        aces=Sum('aces'),
+        errors=Sum('errors'),
     )
 
-    return render(request, 'tournaments/my_profile.html', { 
-        'memberships': memberships, 
-        'next_match': next_match, 
-        'totals': totals, 
-        'stats_count': stats.count(), 
+    return render(request, 'tournaments/my_profile.html', {
+        'memberships': memberships,
+        'next_match': next_match,
+        'totals': totals,
+        'stats_count': stats.count(),
     })
 
+
 @login_required
-def mark_notifications_read(request): 
-    if request.method == 'POST': 
-        request.user.notifications.filter(is_read = False).update(is_read = True) 
+def mark_notifications_read(request):
+    if request.method == 'POST':
+        request.user.notifications.filter(is_read=False).update(is_read=True)
 
     return redirect('home')
 
-@login_required
-def notification_detail(request, notification_id): 
-    notification = get_object_or_404(Notification, id = notification_id, user = request.user)
-    notification.is_read = True 
-    notification.save() 
 
-    return render(request, 'tournaments/notification_detail.html', { 
-        'notification': notification, 
+@login_required
+def notification_detail(request, notification_id):
+    notification = get_object_or_404(Notification, id=notification_id, user=request.user)
+    notification.is_read = True
+    notification.save()
+
+    return render(request, 'tournaments/notification_detail.html', {
+        'notification': notification,
     })

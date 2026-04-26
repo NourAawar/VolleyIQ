@@ -1,0 +1,70 @@
+{% extends 'tournaments/base.html' %}
+
+{% block title %}Players | VolleyIQ{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+        <div>
+            <h2 style="margin:0;">All Players</h2>
+            <p class="small-text" style="margin:4px 0 0;">Players registered in the system.</p>
+        </div>
+        {% for group in user.groups.all %}
+            {% if group.name == 'Club Manager' %}
+                <a href="/players/create/" class="btn btn-accent">+ Create Player Account</a>
+            {% endif %}
+        {% endfor %}
+    </div>
+</div>
+
+<div class="card table-card" style="margin-top:20px;">
+    <table>
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Username</th>
+                <th>Teams</th>
+                {% for group in user.groups.all %}
+                    {% if group.name == 'Club Manager' %}
+                        <th>Action</th>
+                    {% endif %}
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for player in players %}
+                <tr>
+                    <td>{{ player.get_full_name|default:"-" }}</td>
+                    <td>{{ player.username }}</td>
+                    <td>
+                        {% for membership in player.team_memberships.all %}
+                            <span class="badge">{{ membership.team.name }}</span>
+                        {% empty %}
+                            <span style="color:var(--muted)">No team</span>
+                        {% endfor %}
+                    </td>
+                    {% for group in user.groups.all %}
+                        {% if group.name == 'Club Manager' %}
+                            <td>
+                                {% for membership in player.team_memberships.all %}
+                                    <a href="/teams/{{ membership.team.id }}/" class="btn btn-outline" style="padding:4px 10px;font-size:0.82rem;">
+                                        View {{ membership.team.name }}
+                                    </a>
+                                {% endfor %}
+                            </td>
+                        {% endif %}
+                    {% endfor %}
+                </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="4">No players found. <a href="/players/create/">Create the first player.</a></td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div class="form-actions" style="margin-top:20px;">
+    <a href="/teams/" class="btn btn-outline">Back to Teams</a>
+</div>
+{% endblock %}

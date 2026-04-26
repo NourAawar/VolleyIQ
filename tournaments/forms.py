@@ -183,13 +183,35 @@ class RegistrationForm(UserCreationForm):
             group, _ = Group.objects.get_or_create(name=role_name)
             user.groups.add(group)
         return user
-    
+
+
+class CreatePlayerForm(UserCreationForm):
+    first_name = forms.CharField(max_length=30, required=False, widget=forms.TextInput(attrs={'placeholder': 'First name'}))
+    last_name = forms.CharField(max_length=150, required=False, widget=forms.TextInput(attrs={'placeholder': 'Last name'}))
+    email = forms.EmailField(required=False, widget=forms.EmailInput(attrs={'placeholder': 'Email (optional)'}))
+
+    class Meta:
+        model = User
+        fields = ['first_name', 'last_name', 'username', 'email', 'password1', 'password2']
+
+    def save(self, commit=True):
+        user = super().save(commit=False)
+        user.first_name = self.cleaned_data['first_name']
+        user.last_name = self.cleaned_data['last_name']
+        user.email = self.cleaned_data['email']
+        if commit:
+            user.save()
+            group, _ = Group.objects.get_or_create(name='Player')
+            user.groups.add(group)
+        return user
+
+
 class TeamMessageForm(forms.ModelForm):
     class Meta:
-        model = Announcement 
-        fields = ['title', 'body'] 
-        widgets = { 
-            'title': forms.TextInput(attrs={'placeholder': 'Message title'}), 
+        model = Announcement
+        fields = ['title', 'body']
+        widgets = {
+            'title': forms.TextInput(attrs={'placeholder': 'Message title'}),
             'body': forms.Textarea(attrs={'placeholder': 'Write your message...', 'rows': 4}),
         }
 
@@ -201,4 +223,3 @@ class AnnouncementForm(forms.ModelForm):
             'title': forms.TextInput(attrs={'placeholder': 'Announcement title'}),
             'body': forms.Textarea(attrs={'placeholder': 'Write your announcement...', 'rows': 4}),
         }
-        
