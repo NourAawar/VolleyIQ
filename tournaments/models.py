@@ -39,6 +39,8 @@ class Team(models.Model):
     wins = models.IntegerField(default=0)
     losses = models.IntegerField(default=0)
     points = models.IntegerField(default=0)
+    points_for = models.IntegerField(default=0)
+    points_against = models.IntegerField(default=0)
 
     def __str__(self):
         return self.name
@@ -92,10 +94,18 @@ class Match(models.Model):
     home_score = models.PositiveIntegerField(null=True, blank=True)
     away_score = models.PositiveIntegerField(null=True, blank=True)
 
+    round_number = models.PositiveIntegerField(null=True, blank=True)
+    bracket = models.CharField(
+        max_length=20,
+        blank=True,
+        choices=[('winners', 'Winners'), ('losers', 'Losers'), ('grand_final', 'Grand Final')],
+        default=''
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        ordering = ['match_date', 'match_time']
+        ordering = ['round_number', 'match_date', 'match_time']
 
     def __str__(self):
         return f"{self.home_team} vs {self.away_team} - {self.tournament.name}"

@@ -1,4 +1,6 @@
-from .models import Team, Notification
+import math
+from datetime import timedelta, time as default_time
+from .models import Team, Match, Notification
 
 
 def notify_match_coaches(match, message):
@@ -16,6 +18,8 @@ def update_standings(tournament):
         team.wins = 0
         team.losses = 0
         team.points = 0
+        team.points_for = 0
+        team.points_against = 0
 
     for match in tournament.matches.select_related('home_team', 'away_team'):
         if match.home_score is None or match.away_score is None:
@@ -24,6 +28,12 @@ def update_standings(tournament):
         away = teams.get(match.away_team_id)
         if home is None or away is None:
             continue
+
+        home.points_for += match.home_score
+        home.points_against += match.away_score
+        away.points_for += match.away_score
+        away.points_against += match.home_score
+
         if match.home_score > match.away_score:
             home.wins += 1
             home.points += 3
@@ -33,4 +43,234 @@ def update_standings(tournament):
             away.points += 3
             home.losses += 1
 
-    Team.objects.bulk_update(list(teams.values()), ['wins', 'losses', 'points'])
+    Team.objects.bulk_update(
+        list(teams.values()),
+        ['wins', 'losses', 'points', 'points_for', 'points_against']
+    )
+
+
+def _next_power_of_two(n):
+    return 2 ** math.ceil(math.log2(n)) if n > 1 else 1
+
+
+def generate_single_elimination(tournament, teams, start_date):
+    """Generate round 1 matches for a single elimination bracket."""
+    n = len(teams)
+    bracket_size = _next_power_of_two(n)
+    byes = bracket_size - n
+
+    # Top `byes` seeds advance automatically (no match in round 1)
+    # Remaining teams play round 1
+    playing_teams = teams[byes:]  # these teams actually play round 1
+    bye_teams = teams[:byes]      # these teams skip to round 2
+
+    match_date = start_date
+    created = []
+    for i in range(0, len(playing_teams), 2):
+        Match.objects.create(
+            tournament=tournament,
+            home_team=playing_teams[i],
+            away_team=playing_teams[i + 1],
+            match_date=match_date,
+            match_time=default_time(18, 0),
+            venue='Main Court',
+            round_number=1,
+            bracket='winners',
+        )
+        created.append((playing_teams[i], playing_teams[i + 1]))
+        match_date += timedelta(days=1)
+        if match_date > tournament.end_date:
+            match_date = start_date
+
+    return bye_teams
+
+
+def advance_single_elimination(tournament):
+    """
+    Look at the current highest completed round. If all matches are scored,
+    generate the next round from winners (plus any stored byes).
+    Returns True if a new round was created, False if already complete or not ready.
+    """
+    matches = list(
+        tournament.matches
+        .filter(bracket='winners')
+        .select_related('home_team', 'away_team')
+        .order_by('round_number')
+    )
+    if not matches:
+        return False
+
+    current_round = max(m.round_number for m in matches)
+    round_matches = [m for m in matches if m.round_number == current_round]
+
+    # Check all matches in the current round are scored
+    if any(m.home_score is None or m.away_score is None for m in round_matches):
+        return False
+
+    # Collect winners
+    winners = []
+    for m in round_matches:
+        if m.home_score > m.away_score:
+            winners.append(m.home_team)
+        elif m.away_score > m.home_score:
+            winners.append(m.away_team)
+        else:
+            # Draw: home team advances (tournament rules should prevent this but handle gracefully)
+            winners.append(m.home_team)
+
+    if len(winners) == 1:
+        return False  # Tournament is over
+
+    next_round = current_round + 1
+    match_date = tournament.start_date
+    for i in range(0, len(winners), 2):
+        if i + 1 >= len(winners):
+            break
+        Match.objects.create(
+            tournament=tournament,
+            home_team=winners[i],
+            away_team=winners[i + 1],
+            match_date=match_date,
+            match_time=default_time(18, 0),
+            venue='Main Court',
+            round_number=next_round,
+            bracket='winners',
+        )
+        match_date += timedelta(days=1)
+        if match_date > tournament.end_date:
+            match_date = tournament.start_date
+
+    return True
+
+
+def generate_double_elimination(tournament, teams, start_date):
+    """Generate round 1 of the winners bracket for double elimination."""
+    match_date = start_date
+    for i in range(0, len(teams) - 1, 2):
+        Match.objects.create(
+            tournament=tournament,
+            home_team=teams[i],
+            away_team=teams[i + 1],
+            match_date=match_date,
+            match_time=default_time(18, 0),
+            venue='Main Court',
+            round_number=1,
+            bracket='winners',
+        )
+        match_date += timedelta(days=1)
+        if match_date > tournament.end_date:
+            match_date = tournament.start_date
+
+    # If odd team count, last team gets a bye (auto-advances, no round-1 match)
+
+
+def advance_double_elimination(tournament):
+    """
+    After all current-round winners bracket matches are scored:
+    - Generate next winners bracket round from winners
+    - Move losers into the losers bracket
+    - Generate losers bracket matches
+    Returns True if anything was created.
+    """
+    all_matches = list(
+        tournament.matches
+        .select_related('home_team', 'away_team')
+        .order_by('round_number')
+    )
+
+    winners_matches = [m for m in all_matches if m.bracket == 'winners']
+    losers_matches = [m for m in all_matches if m.bracket == 'losers']
+
+    if not winners_matches:
+        return False
+
+    current_w_round = max(m.round_number for m in winners_matches)
+    current_w_matches = [m for m in winners_matches if m.round_number == current_w_round]
+
+    if any(m.home_score is None or m.away_score is None for m in current_w_matches):
+        return False
+
+    match_date = tournament.start_date
+
+    # Collect winners and losers from current winners bracket round
+    w_winners, w_losers = [], []
+    for m in current_w_matches:
+        if m.home_score >= m.away_score:
+            w_winners.append(m.home_team)
+            w_losers.append(m.away_team)
+        else:
+            w_winners.append(m.away_team)
+            w_losers.append(m.home_team)
+
+    created = False
+
+    # Generate next winners bracket round if more than 1 winner
+    if len(w_winners) > 1:
+        next_w_round = current_w_round + 1
+        for i in range(0, len(w_winners) - 1, 2):
+            Match.objects.create(
+                tournament=tournament,
+                home_team=w_winners[i],
+                away_team=w_winners[i + 1],
+                match_date=match_date,
+                match_time=default_time(18, 0),
+                venue='Main Court',
+                round_number=next_w_round,
+                bracket='winners',
+            )
+            match_date += timedelta(days=1)
+            if match_date > tournament.end_date:
+                match_date = tournament.start_date
+        created = True
+
+    # Handle losers bracket
+    # Collect teams currently in losers bracket that haven't lost yet (survived losers matches)
+    losers_survivors = []
+    if losers_matches:
+        current_l_round = max(m.round_number for m in losers_matches)
+        current_l_matches = [m for m in losers_matches if m.round_number == current_l_round]
+        if all(m.home_score is not None and m.away_score is not None for m in current_l_matches):
+            for m in current_l_matches:
+                if m.home_score >= m.away_score:
+                    losers_survivors.append(m.home_team)
+                else:
+                    losers_survivors.append(m.away_team)
+
+    # New losers bracket entrants = losers from this winners bracket round
+    all_losers_bracket = w_losers + losers_survivors
+    next_l_round = (max((m.round_number for m in losers_matches), default=0)) + 1
+
+    if len(all_losers_bracket) >= 2:
+        for i in range(0, len(all_losers_bracket) - 1, 2):
+            Match.objects.create(
+                tournament=tournament,
+                home_team=all_losers_bracket[i],
+                away_team=all_losers_bracket[i + 1],
+                match_date=match_date,
+                match_time=default_time(19, 0),
+                venue='Main Court',
+                round_number=next_l_round,
+                bracket='losers',
+            )
+            match_date += timedelta(days=1)
+            if match_date > tournament.end_date:
+                match_date = tournament.start_date
+        created = True
+
+    # Check if it's time for the grand final
+    # Grand final: 1 winner bracket survivor vs 1 losers bracket survivor
+    if len(w_winners) == 1 and len(losers_survivors) == 1:
+        if not any(m.bracket == 'grand_final' for m in all_matches):
+            Match.objects.create(
+                tournament=tournament,
+                home_team=w_winners[0],
+                away_team=losers_survivors[0],
+                match_date=match_date,
+                match_time=default_time(18, 0),
+                venue='Main Court',
+                round_number=current_w_round + 1,
+                bracket='grand_final',
+            )
+            created = True
+
+    return created

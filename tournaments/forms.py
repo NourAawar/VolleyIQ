@@ -1,5 +1,6 @@
 from django import forms
 from django.contrib.auth.models import User, Group
+from django.contrib.auth.forms import UserCreationForm
 from .models import Tournament, Team, TeamMembership, Match, Task, PlayerAvailability, Attendance
 
 class TournamentForm(forms.ModelForm):
@@ -158,3 +159,27 @@ class AttendanceForm(forms.ModelForm):
         widgets = {
             'note': forms.TextInput(attrs={'placeholder': 'Optional note'}),
         }
+
+
+class RegistrationForm(UserCreationForm):
+    ROLE_CHOICES = [
+        ('Player', 'Player'),
+        ('Coach', 'Coach'),
+        ('Club Manager', 'Club Manager'),
+    ]
+    email = forms.EmailField(required=True)
+    role = forms.ChoiceField(choices=ROLE_CHOICES, widget=forms.Select())
+
+    class Meta:
+        model = User
+        fields = ['username', 'email', 'password1', 'password2', 'role']
+
+    def save(self, commit=True):
+        user = super().save(commit=False)
+        user.email = self.cleaned_data['email']
+        if commit:
+            user.save()
+            role_name = self.cleaned_data['role']
+            group, _ = Group.objects.get_or_create(name=role_name)
+            user.groups.add(group)
+        return user

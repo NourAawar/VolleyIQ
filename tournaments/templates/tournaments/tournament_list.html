@@ -11,6 +11,7 @@
         <thead>
             <tr>
                 <th>Name</th>
+                <th>Status</th>
                 <th>Start Date</th>
                 <th>End Date</th>
                 <th>Format</th>
@@ -27,6 +28,15 @@
             {% for tournament in tournaments %}
                 <tr>
                     <td>{{ tournament.name }}</td>
+                    <td>
+                        {% if tournament.end_date < today %}
+                            <span class="badge" style="background:#7f8c8d;">Finished</span>
+                        {% elif tournament.start_date <= today %}
+                            <span class="badge" style="background:#27ae60;">Ongoing</span>
+                        {% else %}
+                            <span class="badge" style="background:#2980b9;">Upcoming</span>
+                        {% endif %}
+                    </td>
                     <td>{{ tournament.start_date }}</td>
                     <td>{{ tournament.end_date }}</td>
                     <td><span class="badge">{{ tournament.get_format_display }}</span></td>

@@ -12,6 +12,15 @@
         &nbsp;
         <strong>Dates:</strong>
         {{ tournament.start_date }} → {{ tournament.end_date }}
+        &nbsp;
+        <strong>Status:</strong>
+        {% if tournament.end_date < today %}
+            <span class="badge" style="background:#7f8c8d;">Finished</span>
+        {% elif tournament.start_date <= today %}
+            <span class="badge" style="background:#27ae60;">Ongoing</span>
+        {% else %}
+            <span class="badge" style="background:#2980b9;">Upcoming</span>
+        {% endif %}
     </div>
 
     {% for group in user.groups.all %}
@@ -23,6 +32,11 @@
                 <a href="/tournaments/{{ tournament.id }}/generate-schedule/" class="btn btn-primary">
                     Generate Schedule
                 </a>
+                {% if tournament.format == 'single_elimination' or tournament.format == 'double_elimination' %}
+                    <a href="/tournaments/{{ tournament.id }}/advance-round/" class="btn btn-primary">
+                        Advance Round
+                    </a>
+                {% endif %}
                 <a href="/tournaments/{{ tournament.id }}/delete/" class="btn btn-outline" style="color:#c0392b;border-color:#c0392b;">
                     Delete Tournament
                 </a>
@@ -80,6 +94,7 @@
     <table>
         <thead>
             <tr>
+                <th>Round</th>
                 <th>Date</th>
                 <th>Time</th>
                 <th>Match</th>
@@ -94,19 +109,28 @@
         <tbody>
     {% for match in matches %}
     <tr>
+        <td>
+            {% if match.bracket == 'grand_final' %}
+                <span class="badge" style="background:#e67e22;">Grand Final</span>
+            {% elif match.bracket == 'losers' %}
+                <span class="badge" style="background:#7f8c8d;">Losers R{{ match.round_number }}</span>
+            {% elif match.round_number %}
+                R{{ match.round_number }}
+            {% else %}
+                —
+            {% endif %}
+        </td>
         <td>{{ match.match_date }}</td>
         <td>{{ match.match_time }}</td>
         <td>
-    {{ match.home_team.name }}
-
-    {% if match.home_score is not None and match.away_score is not None %}
-        {{ match.home_score }} - {{ match.away_score }}
-    {% else %}
-        <span>vs</span>
-    {% endif %}
-
-    {{ match.away_team.name }}
-</td>
+            {{ match.home_team.name }}
+            {% if match.home_score is not None and match.away_score is not None %}
+                <strong>{{ match.home_score }} - {{ match.away_score }}</strong>
+            {% else %}
+                vs
+            {% endif %}
+            {{ match.away_team.name }}
+        </td>
         <td>{{ match.venue }}</td>
 
         <td>
@@ -116,55 +140,45 @@
                         <a href="/matches/{{ match.id }}/edit-time/" class="btn btn-primary">Edit Time</a>
                         <a href="/matches/{{ match.id }}/update-venue/" class="btn btn-accent">Update Venue</a>
                     {% endif %}
+                    <a href="/matches/{{ match.id }}/availability/" class="btn btn-outline">Availability</a>
                 {% endif %}
             {% endfor %}
 
             {% if user == match.home_team.coach or user == match.away_team.coach %}
-                <a href="/matches/{{ match.id }}/availability/" class="btn btn-outline">
-                    Availability
-                </a>
+                <a href="/matches/{{ match.id }}/availability/" class="btn btn-outline">Availability</a>
                 {% if match.match_date <= today %}
-                    <a href="/matches/{{ match.id }}/score/" class="btn btn-primary">
-                        Enter Score
-                    </a>
-                    <a href="/matches/{{ match.id }}/attendance/" class="btn btn-accent">
-                        Attendance
-                    </a>
+                    <a href="/matches/{{ match.id }}/score/" class="btn btn-primary">Enter Score</a>
+                    <a href="/matches/{{ match.id }}/attendance/" class="btn btn-accent">Attendance</a>
                 {% endif %}
             {% endif %}
-
-            {% for group in user.groups.all %}
-                {% if group.name == 'Club Manager' %}
-                    <a href="/matches/{{ match.id }}/availability/" class="btn btn-outline">
-                        Availability
-                    </a>
-                {% endif %}
-            {% endfor %}
         </td>
     </tr>
     {% empty %}
     <tr>
-        <td colspan="5">No schedule generated yet.</td>
+        <td colspan="6">No schedule generated yet.</td>
     </tr>
     {% endfor %}
-</tbody>
-        </table>
-    </div>
+    </tbody>
+    </table>
+</div>
 
-    <div class="card" style="margin-top:24px;">
+<div class="card" style="margin-top:24px;">
     <h2>Standings</h2>
+    <p class="small-text">
+        Sorted by points, then wins, then point differential (tie-breaker).
+    </p>
 
     <table>
         <thead>
             <tr>
                 <th>Rank</th>
                 <th>Team</th>
-                <th>Wins</th>
-                <th>Losses</th>
-                <th>Points</th>
+                <th>W</th>
+                <th>L</th>
+                <th>Pts</th>
+                <th>+/-</th>
             </tr>
         </thead>
-
         <tbody>
             {% for team in registered_teams %}
             <tr>
@@ -172,8 +186,13 @@
                 <td>{{ team.name }}</td>
                 <td>{{ team.wins }}</td>
                 <td>{{ team.losses }}</td>
-                <td>{{ team.points }}</td>
+                <td><strong>{{ team.points }}</strong></td>
+                <td style="color:{% if team.point_diff > 0 %}#27ae60{% elif team.point_diff < 0 %}#c0392b{% else %}inherit{% endif %}">
+                    {% if team.point_diff > 0 %}+{% endif %}{{ team.point_diff }}
+                </td>
             </tr>
+            {% empty %}
+            <tr><td colspan="6">No teams registered yet.</td></tr>
             {% endfor %}
         </tbody>
     </table>

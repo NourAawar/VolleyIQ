@@ -4,15 +4,20 @@ from django.http import HttpResponseForbidden
 from .forms import (
     TournamentForm, TeamForm, AssignCoachForm, AddPlayerForm,
     RegisterTeamForm, EditMatchTimeForm, UpdateMatchVenueForm,
-    MatchScoreForm, AssignTaskForm, PlayerAvailabilityForm, AttendanceForm
+    MatchScoreForm, AssignTaskForm, PlayerAvailabilityForm, AttendanceForm,
+    RegistrationForm
 )
 from .models import Tournament, Team, TeamMembership, Match, Notification, PerformanceStat, Task, PlayerAvailability, Attendance
 from django.forms import modelformset_factory
-from .utils import update_standings, notify_match_coaches
+from .utils import (
+    update_standings, notify_match_coaches,
+    generate_single_elimination, advance_single_elimination,
+    generate_double_elimination, advance_double_elimination,
+)
 from django.contrib import messages
 from datetime import timedelta, time, date
 from django.db import models
-from django.db.models import Sum
+from django.db.models import Sum, F
 
 
 def is_coach(user):
@@ -36,6 +41,20 @@ def home(request):
     return render(request, 'tournaments/home.html', {
         'notifications': notifications,
     })
+
+
+def register(request):
+    if request.user.is_authenticated:
+        return redirect('home')
+    if request.method == 'POST':
+        form = RegistrationForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Account created! You can now log in.")
+            return redirect('login')
+    else:
+        form = RegistrationForm()
+    return render(request, 'registration/register.html', {'form': form})
 
 
 @login_required
@@ -75,14 +94,19 @@ def delete_tournament(request, tournament_id):
 @login_required
 def tournament_list(request):
     tournaments = Tournament.objects.all()
-    return render(request, 'tournaments/tournament_list.html', {'tournaments': tournaments})
+    return render(request, 'tournaments/tournament_list.html', {
+        'tournaments': tournaments,
+        'today': date.today(),
+    })
 
 
 @login_required
 def tournament_detail(request, tournament_id):
     tournament = get_object_or_404(Tournament, id=tournament_id)
 
-    registered_teams = tournament.teams.all().order_by('-points', '-wins')
+    registered_teams = tournament.teams.annotate(
+        point_diff=F('points_for') - F('points_against')
+    ).order_by('-points', '-wins', '-point_diff')
 
     matches = tournament.matches.select_related(
         'home_team',
@@ -458,31 +482,79 @@ def generate_schedule(request, tournament_id):
         messages.warning(request, "Schedule already exists for this tournament.")
         return redirect('tournament_detail', tournament_id=tournament.id)
 
-    if tournament.format != 'round_robin':
-        messages.error(request, "Automatic schedule generation is currently supported for round robin tournaments only.")
+    fmt = tournament.format
+
+    if fmt == 'round_robin':
+        current_date = tournament.start_date
+        for i in range(len(teams)):
+            for j in range(i + 1, len(teams)):
+                Match.objects.create(
+                    tournament=tournament,
+                    home_team=teams[i],
+                    away_team=teams[j],
+                    match_date=current_date,
+                    match_time=time(18, 0),
+                    venue='Main Court',
+                )
+                current_date += timedelta(days=1)
+                if current_date > tournament.end_date:
+                    current_date = tournament.start_date
+
+    elif fmt == 'single_elimination':
+        if len(teams) < 2:
+            messages.error(request, "At least 2 teams required for elimination.")
+            return redirect('tournament_detail', tournament_id=tournament.id)
+        generate_single_elimination(tournament, teams, tournament.start_date)
+
+    elif fmt == 'double_elimination':
+        if len(teams) < 2:
+            messages.error(request, "At least 2 teams required for elimination.")
+            return redirect('tournament_detail', tournament_id=tournament.id)
+        generate_double_elimination(tournament, teams, tournament.start_date)
+
+    else:
+        messages.error(request, "Unknown tournament format.")
         return redirect('tournament_detail', tournament_id=tournament.id)
 
-    current_date = tournament.start_date
-    default_time = time(18, 0)
-    default_venue = "Main Court"
-
-    for i in range(len(teams)):
-        for j in range(i + 1, len(teams)):
-            Match.objects.create(
-                tournament=tournament,
-                home_team=teams[i],
-                away_team=teams[j],
-                match_date=current_date,
-                match_time=default_time,
-                venue=default_venue
+    # Notify all team coaches in this tournament
+    notified = set()
+    for team in teams:
+        if team.coach and team.coach.id not in notified:
+            Notification.objects.create(
+                user=team.coach,
+                message=f"Match schedule has been generated for tournament: {tournament.name}"
             )
-
-            current_date += timedelta(days=1)
-
-            if current_date > tournament.end_date:
-                current_date = tournament.start_date
+            notified.add(team.coach.id)
 
     messages.success(request, "Tournament schedule generated successfully.")
+    return redirect('tournament_detail', tournament_id=tournament.id)
+
+
+@login_required
+def advance_round(request, tournament_id):
+    if not is_club_manager(request.user):
+        return HttpResponseForbidden("Only Club Managers can advance rounds.")
+
+    tournament = get_object_or_404(Tournament, id=tournament_id)
+
+    if tournament.format == 'single_elimination':
+        created = advance_single_elimination(tournament)
+    elif tournament.format == 'double_elimination':
+        created = advance_double_elimination(tournament)
+    else:
+        messages.error(request, "Round advancement is only for elimination formats.")
+        return redirect('tournament_detail', tournament_id=tournament.id)
+
+    if created:
+        messages.success(request, "Next round generated successfully.")
+    else:
+        current_matches = tournament.matches.filter(bracket__in=['winners', 'grand_final'])
+        unscored = current_matches.filter(home_score__isnull=True)
+        if unscored.exists():
+            messages.warning(request, "All matches in the current round must be scored before advancing.")
+        else:
+            messages.info(request, "The tournament is complete — no further rounds to generate.")
+
     return redirect('tournament_detail', tournament_id=tournament.id)
 
 
@@ -508,6 +580,10 @@ def update_match_score(request, match_id):
         if form.is_valid():
             match = form.save()
             update_standings(match.tournament)
+            notify_match_coaches(
+                match,
+                f"Score recorded: {match.home_team.name} {match.home_score} - {match.away_score} {match.away_team.name}"
+            )
             messages.success(request, "Match score updated successfully.")
             return redirect('tournament_detail', tournament_id=match.tournament.id)
     else:
@@ -536,6 +612,10 @@ def assign_task(request, team_id):
             task.assigned_by = request.user
             task.team = team
             task.save()
+            Notification.objects.create(
+                user=task.assigned_to,
+                message=f"New task assigned by {request.user.username}: {task.title}"
+            )
             messages.success(request, "Task assigned successfully.")
             return redirect('team_tasks', team_id=team.id)
     else:
