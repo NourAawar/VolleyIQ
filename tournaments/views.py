@@ -36,15 +36,67 @@ def is_club_manager(user):
 def home(request):
     notifications = []
     player_teams = []
+    upcoming_matches = []
+    availability_gaps = [] 
+    teams_without_coach = []
+    pending_tournaments = [] 
+    next_match = None 
+    stats_totals = None
 
     if request.user.is_authenticated:
         notifications = request.user.notifications.order_by('-created_at')[:5]
-        if is_player(request.user): 
+        today = date.today()
+
+        if is_coach(request.user): 
+            coached_teams = Team.objects.filter(coach = request.user)
+            
+            upcoming_matches = Match.objects.filter( 
+                models.Q(home_team__in = coached_teams) | models.Q(away_team__in = coached_teams),
+                match_date__gte = today,
+                match_date__lte = today + timedelta(days = 7)
+            ).select_related('home_team', 'away_team', 'tournament').order_by('match_date', 'match_time') 
+
+            availability_gaps = PlayerAvailability.objects.filter( 
+                match__in = upcoming_matches,
+                status = 'unavailable' 
+            ).select_related('player', 'match') 
+
+        elif is_club_manager(request.user): 
+            upcoming_matches = Match.objects.filter(
+                match_date__gte = today,
+                match_date__lte = today + timedelta(days = 7) 
+            ).select_related('home_team', 'away_team', 'tournament').order_by('match_date', 'match_time')
+
+            teams_without_coach = Team.objects.filter(coach__isnull = True)
+
+            pending_tournaments = Tournament.objects.filter(start_date__gt = today) 
+
+        elif is_player(request.user): 
             player_teams = Team.objects.filter(memberships__player = request.user)
 
-    return render(request, 'tournaments/home.html', {
+            team_ids = list(player_teams.values_list('id', flat = True))
+
+            next_match = Match.objects.filter( 
+                models.Q(home_team_id__in = team_ids) | models.Q(away_team_id__in = team_ids),
+                match_date__gte = today
+            ).select_related('home_team', 'away_team', 'tournament').order_by('match_date', 'match_time').first() 
+
+            stats_totals = PerformanceStat.objects.filter(player = request.user).aggregate( 
+                kills = Sum('kills'),
+                assists = Sum('assists'),
+                blocks = Sum('blocks'),
+                aces = Sum('aces'),
+            )
+
+    return render(request, 'tournaments/home.html', { 
         'notifications': notifications,
-        'player_teams': player_teams,
+        'player_teams': player_teams, 
+        'upcoming_matches': upcoming_matches, 
+        'availability_gaps': availability_gaps, 
+        'teams_without_coach': teams_without_coach, 
+        'pending_tournaments': pending_tournaments, 
+        'next_match': next_match, 
+        'stats_totals': stats_totals, 
     })
 
 

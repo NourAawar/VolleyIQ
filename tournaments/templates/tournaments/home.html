@@ -54,6 +54,186 @@
     {% endif %}
 </div>
 
+{# the coach dashboard #}
+{% for group in user.groups.all %}
+{% if group.name == 'Coach' %}
+<div class = "card" style = "margin-top: 24px;">
+    <h3 style = "margin-top: 0;">Upcoming Matches (Next 7 Days)</h3>
+    {% if upcoming_matches %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Match</th>
+                    <th>Tournament</th>
+                    <th>Date</th>
+                    <th>Time</th> 
+                    <th>Venue</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for match in upcoming_matches %}
+                    <tr>
+                        <td>{{match.home_team.name}} vs {{match.away_team.name}}</td>
+                        <td>{{match.tournament.name}}</td>
+                        <td>{{match.match_date}}</td>
+                        <td>{{match.match_time}}</td>
+                        <td>{{match.venue}}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p class = "small-text">No upcoming matches in the next 7 days.</p>
+    {% endif %}
+</div>
+
+{% if availability_gaps %}
+<div class = "card" style = "margin-top:16px;">
+    <h3 style = "margin-top: 0;">⚠️ Availability Gaps</h3>
+    <p class = "small-text">Players marked unavailable for upcoming matches.</p>
+    <table>
+        <thead>
+            <tr>
+                <th>Player</th>
+                <th>Match</th>
+                <th>Date</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for gap in availability_gaps %}
+                <tr>
+                    <td>{{gap.player.get_full_name|default:gap.player.username }}</td>
+                    <td>{{gap.match.home_team.name }} vs {{gap.match.away_team.name }}</td>
+                    <td>{{gap.match.match_date }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+{% endif %}
+{% endfor %}
+
+{# the club manager dashboard #}
+{% for group in user.groups.all %}
+{% if group.name == 'Club Manager' %}
+
+<div style = "display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-top: 24px;">
+    <div class = "card" style = "text-align: center;">
+        <h3 style = "margin: 0 0 8px;">Upcoming Matches</h3>
+        <p style = "font-size: 2rem; font-weight: 700; margin: 0; color: var(--primary);">{{upcoming_matches|length}}</p>
+        <p class = "small-text">in next 7 days</p>
+    </div>
+    <div class = "card" style = "text-align: center;">
+        <h3 style = "margin: 0 0 8px;">Teams Without Coach</h3>
+        {% if teams_without_coach %}
+            <p style = "font-size: 2rem; font-weight: 700; margin: 0; color: #c0392b;">{{teams_without_coach|length}}</p>
+        {% else %}
+            <p style = "font-size: 2rem; font-weight: 700; margin: 0;color: var(--primary);">{{teams_without_coach|length}}</p>
+        {% endif %} 
+        <p class = "small-text">need a coach assigned</p>
+    </div>
+    <div class = "card" style = "text-align: center;">
+        <h3 style = "margin: 0 0 8px;">Pending Tournaments</h3>
+        <p style = "font-size: 2rem; font-weight: 700; margin: 0; color: var(--primary);">{{pending_tournaments|length}}</p>
+        <p class = "small-text">yet to start</p>
+    </div>
+</div>
+
+{% if teams_without_coach %}
+<div class = "card" style = "margin-top: 16px;">
+    <h3 style = "margin-top: 0;">⚠️ Teams Without a Coach</h3>
+    <table>
+        <thead>
+            <tr><th>Team</th><th>Action</th></tr>
+        </thead>
+        <tbody>
+            {% for team in teams_without_coach %}
+                <tr>
+                    <td>{{team.name}}</td>
+                    <td>
+                        <a href = "/teams/{{ team.id }}/assign-coach/" class = "btn btn-outline" style = "padding: 4px 10px; font-size: 0.85rem;">
+                            Assign Coach
+                        </a>
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+{% if upcoming_matches %}
+<div class = "card" style = "margin-top: 16px;">
+    <h3 style = "margin-top: 0;">Upcoming Matches (Next 7 Days)</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Match</th>
+                <th>Tournament</th>
+                <th>Date</th>
+                <th>Venue</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for match in upcoming_matches %}
+                <tr>
+                    <td>{{match.home_team.name}} vs {{match.away_team.name }}</td>
+                    <td>{{match.tournament.name}}</td>
+                    <td>{{match.match_date }}</td>
+                    <td>{{match.venue}}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endif %}
+
+{% endif %}
+{% endfor %}
+
+{# the player dashboard #}
+{% for group in user.groups.all %}
+{% if group.name == 'Player' %}
+
+<div style = "display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 16px; margin-top: 24px;">
+    <div class = "card" style = "text-align: center;">
+        <h3 style = "margin: 0 0 8px;">Kills</h3>
+        <p style = "font-size: 2rem; font-weight: 700; margin: 0; color: var(--primary);">{{stats_totals.kills|default:"0" }}</p>
+    </div>
+    <div class = "card" style = "text-align: center;">
+        <h3 style = "margin: 0 0 8px;">Assists</h3>
+        <p style = "font-size: 2rem; font-weight: 700; margin: 0; color: var(--primary);">{{stats_totals.assists|default:"0" }}</p>
+    </div>
+    <div class = "card" style = "text-align: center;">
+        <h3 style = "margin: 0 0 8px;">Blocks</h3>
+        <p style = "font-size: 2rem; font-weight: 700; margin: 0; color: var(--primary);">{{stats_totals.blocks|default:"0" }}</p>
+    </div>
+    <div class = "card" style = "text-align: center;">
+        <h3 style = "margin: 0 0 8px;">Aces</h3>
+        <p style = "font-size: 2rem; font-weight: 700; margin: 0; color: var(--primary);">{{stats_totals.aces|default:"0"}}</p>
+    </div>
+</div>
+
+{% if next_match %}
+<div class = "card" style = "margin-top: 16px;">
+    <h3 style = "margin-top: 0;">Your Next Match</h3>
+    <div class = "role-box">
+        <p style = "margin: 0 0 4px;"><strong>{{next_match.home_team.name}} vs {{next_match.away_team.name}}</strong></p>
+        <p style = "margin: 0;" class = "small-text">
+            {{next_match.tournament.name}} &middot; {{next_match.match_date}} at {{next_match.match_time}} &middot; {{next_match.venue}}
+        </p>
+    </div>
+</div>
+{% endif %}
+
+{% endif %}
+{% endfor %}
+
+
+{# notifications section#}
+
 {% if user.is_authenticated %}
 <div class="card table-card" style="margin-top:24px;">
     <h2>Recent Notifications</h2>
