@@ -13,76 +13,84 @@ class TournamentForm(forms.ModelForm):
             'format': forms.Select(),
         }
 
-class TeamForm(forms.ModelForm): 
-    class Meta: 
-        model = Team 
+    def clean(self):
+        cleaned_data = super().clean()
+        start_date = cleaned_data.get('start_date')
+        end_date = cleaned_data.get('end_date')
+        if start_date and end_date and end_date < start_date:
+            raise forms.ValidationError("End date cannot be before start date.")
+        return cleaned_data
+
+class TeamForm(forms.ModelForm):
+    class Meta:
+        model = Team
         fields = ['name']
         widgets = {
-            'name': forms.TextInput(attrs = {'placeholder': 'Enter team name'}), 
+            'name': forms.TextInput(attrs = {'placeholder': 'Enter team name'}),
         }
 
-class AssignCoachForm(forms.ModelForm): 
-    class Meta: 
-        model = Team 
+class AssignCoachForm(forms.ModelForm):
+    class Meta:
+        model = Team
         fields = ['coach']
         widgets = {
-            'coach': forms.Select(), 
+            'coach': forms.Select(),
         }
-    
-    def __init__(self, *args, **kwargs): 
+
+    def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        try: 
+        try:
             coach_group = Group.objects.get(name = 'Coach')
             self.fields['coach'].queryset = User.objects.filter(groups = coach_group)
 
-        except Group.DoesNotExist: 
+        except Group.DoesNotExist:
             self.fields['coach'].queryset = User.objects.none()
-        
-        self.fields['coach'].required = False 
+
+        self.fields['coach'].required = False
         self.fields['coach'].empty_label = '- Remove coach -'
 
-class AddPlayerForm(forms.ModelForm): 
-    class Meta: 
+class AddPlayerForm(forms.ModelForm):
+    class Meta:
         model = TeamMembership
         fields = ['player', 'position', 'jersey_number']
         widgets = {
-            'player': forms.Select(), 
-            'position': forms.Select(), 
-            'jersey_number': forms.NumberInput(attrs = {'placeholder': 'Jersey number (optional)'}), 
+            'player': forms.Select(),
+            'position': forms.Select(),
+            'jersey_number': forms.NumberInput(attrs = {'placeholder': 'Jersey number (optional)'}),
         }
 
-    def __init__(self, *args, team = None, **kwargs): 
+    def __init__(self, *args, team = None, **kwargs):
         super().__init__(*args, **kwargs)
 
-        try: 
+        try:
             player_group = Group.objects.get(name = 'Player')
             already_added = []
 
-            if team: 
+            if team:
                 already_added = team.memberships.values_list('player_id', flat = True)
-                
+
             self.fields['player'].queryset = User.objects.filter(
                 groups = player_group
             ).exclude(id__in = already_added)
-            
-        except Group.DoesNotExist: 
-            self.fields['player'].queryset = User.objects.none()
-            
-        self.fields['position'].required = False 
-        self.fields['jersey_number'].required = False 
 
-class RegisterTeamForm(forms.Form): 
+        except Group.DoesNotExist:
+            self.fields['player'].queryset = User.objects.none()
+
+        self.fields['position'].required = False
+        self.fields['jersey_number'].required = False
+
+class RegisterTeamForm(forms.Form):
     team = forms.ModelChoiceField(
-        queryset = Team.objects.none(), 
-        empty_label = '- Select a team -', 
-        widget = forms.Select(), 
+        queryset = Team.objects.none(),
+        empty_label = '- Select a team -',
+        widget = forms.Select(),
     )
 
-    def __init__(self, *args, tournament = None, **kwargs): 
+    def __init__(self, *args, tournament = None, **kwargs):
         super().__init__(*args, **kwargs)
 
-        if tournament: 
+        if tournament:
             already_registered = tournament.teams.values_list('id', flat = True)
             self.fields['team'].queryset = Team.objects.exclude(id__in = already_registered)
 
@@ -94,6 +102,20 @@ class EditMatchTimeForm(forms.ModelForm):
             'match_date': forms.DateInput(attrs={'type': 'date'}),
             'match_time': forms.TimeInput(attrs={'type': 'time'}),
         }
+
+    def clean_match_date(self):
+        match_date = self.cleaned_data.get('match_date')
+        if match_date and self.instance and self.instance.pk:
+            tournament = self.instance.tournament
+            if match_date < tournament.start_date:
+                raise forms.ValidationError(
+                    f"Match date cannot be before the tournament start date ({tournament.start_date})."
+                )
+            if match_date > tournament.end_date:
+                raise forms.ValidationError(
+                    f"Match date cannot be after the tournament end date ({tournament.end_date})."
+                )
+        return match_date
 
 
 class UpdateMatchVenueForm(forms.ModelForm):
@@ -111,4 +133,4 @@ class MatchScoreForm(forms.ModelForm):
         widgets = {
             'home_score': forms.NumberInput(attrs={'placeholder': 'Home team score'}),
             'away_score': forms.NumberInput(attrs={'placeholder': 'Away team score'}),
-            }
+        }

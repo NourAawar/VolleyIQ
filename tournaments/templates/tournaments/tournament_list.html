@@ -16,6 +16,11 @@
                 <th>Format</th>
                 <th>Teams</th>
                 <th>Details</th>
+                {% for group in user.groups.all %}
+                    {% if group.name == 'Club Manager' %}
+                        <th>Actions</th>
+                    {% endif %}
+                {% endfor %}
             </tr>
         </thead>
         <tbody>
@@ -25,16 +30,25 @@
                     <td>{{ tournament.start_date }}</td>
                     <td>{{ tournament.end_date }}</td>
                     <td><span class="badge">{{ tournament.get_format_display }}</span></td>
-                    <td>{{tournament.teams.count}}</td>
+                    <td>{{ tournament.teams.count }}</td>
                     <td>
-                        <a href = "/tournaments/{{tournament.id}}/" class = "btn btn-primary" style = "padding:6px 14px;font-size:0.88rem;">
-                            View 
+                        <a href="/tournaments/{{ tournament.id }}/" class="btn btn-primary" style="padding:6px 14px;font-size:0.88rem;">
+                            View
                         </a>
                     </td>
+                    {% for group in user.groups.all %}
+                        {% if group.name == 'Club Manager' %}
+                            <td>
+                                <a href="/tournaments/{{ tournament.id }}/delete/" class="btn btn-outline" style="padding:5px 12px;font-size:0.85rem;color:#c0392b;border-color:#c0392b;">
+                                    Delete
+                                </a>
+                            </td>
+                        {% endif %}
+                    {% endfor %}
                 </tr>
             {% empty %}
                 <tr>
-                    <td colspan="4">No tournaments yet.</td>
+                    <td colspan="7">No tournaments yet.</td>
                 </tr>
             {% endfor %}
         </tbody>
@@ -43,12 +57,12 @@
     <div class="form-actions">
         {% for group in user.groups.all %}
             {% if group.name == 'Club Manager' %}
-                <a href = "/create/" class = "btn btn-accent">
+                <a href="/create/" class="btn btn-accent">
                     Create Tournament
                 </a>
             {% endif %}
         {% endfor %}
-        <a href = "/" class = "btn btn-outline">
+        <a href="/" class="btn btn-outline">
             Back Home
         </a>
     </div>

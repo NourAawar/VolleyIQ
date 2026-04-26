@@ -23,6 +23,9 @@
                 <a href="/tournaments/{{ tournament.id }}/generate-schedule/" class="btn btn-primary">
                     Generate Schedule
                 </a>
+                <a href="/tournaments/{{ tournament.id }}/delete/" class="btn btn-outline" style="color:#c0392b;border-color:#c0392b;">
+                    Delete Tournament
+                </a>
             </div>
         {% endif %}
     {% endfor %}
@@ -82,7 +85,7 @@
                 <th>Match</th>
                 <th>Venue</th>
                 {% for group in user.groups.all %}
-                    {% if group.name == 'Club Manager' %}
+                    {% if group.name == 'Club Manager' or group.name == 'Coach' %}
                         <th>Actions</th>
                     {% endif %}
                 {% endfor %}
@@ -107,15 +110,21 @@
         <td>{{ match.venue }}</td>
 
         <td>
-            {% if user.groups.all.0.name == "Club Manager" %}
-                <a href="/matches/{{ match.id }}/edit-time/" class="btn btn-primary">Edit Time</a>
-                <a href="/matches/{{ match.id }}/update-venue/" class="btn btn-accent">Update Venue</a>
-            {% endif %}
+            {% for group in user.groups.all %}
+                {% if group.name == 'Club Manager' %}
+                    {% if match.match_date >= today %}
+                        <a href="/matches/{{ match.id }}/edit-time/" class="btn btn-primary">Edit Time</a>
+                        <a href="/matches/{{ match.id }}/update-venue/" class="btn btn-accent">Update Venue</a>
+                    {% endif %}
+                {% endif %}
+            {% endfor %}
 
-            {% if user.groups.all.0.name == "Coach" %}
-                <a href="/matches/{{ match.id }}/score/" class="btn btn-primary">
-                    Enter Score
-                </a>
+            {% if user == match.home_team.coach or user == match.away_team.coach %}
+                {% if match.match_date <= today %}
+                    <a href="/matches/{{ match.id }}/score/" class="btn btn-primary">
+                        Enter Score
+                    </a>
+                {% endif %}
             {% endif %}
         </td>
     </tr>
@@ -127,7 +136,7 @@
 </tbody>
         </table>
     </div>
-    
+
     <div class="card" style="margin-top:24px;">
     <h2>Standings</h2>
 

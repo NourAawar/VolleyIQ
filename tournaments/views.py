@@ -8,7 +8,7 @@ from .forms import (
 )
 from .models import Tournament, Team, TeamMembership, Match, Notification, PerformanceStat
 from django.contrib import messages
-from datetime import timedelta, time
+from datetime import timedelta, time, date
 from django.db import models
 from django.db.models import Sum
 
@@ -53,6 +53,23 @@ def create_tournament(request):
 
 
 @login_required
+def delete_tournament(request, tournament_id):
+    if not is_club_manager(request.user):
+        return HttpResponseForbidden("Only Club Managers can delete tournaments.")
+
+    tournament = get_object_or_404(Tournament, id=tournament_id)
+
+    if request.method == 'POST':
+        tournament.delete()
+        messages.success(request, f"Tournament '{tournament.name}' has been deleted.")
+        return redirect('tournament_list')
+
+    return render(request, 'tournaments/confirm_delete_tournament.html', {
+        'tournament': tournament,
+    })
+
+
+@login_required
 def tournament_list(request):
     tournaments = Tournament.objects.all()
     return render(request, 'tournaments/tournament_list.html', {'tournaments': tournaments})
@@ -79,6 +96,7 @@ def tournament_detail(request, tournament_id):
         'registered_teams': registered_teams,
         'matches': matches,
         'standings': standings,
+        'today': date.today(),
     })
 
 
@@ -88,6 +106,10 @@ def register_team(request, tournament_id):
         return HttpResponseForbidden("Only Club Managers can register teams.")
 
     tournament = get_object_or_404(Tournament, id=tournament_id)
+
+    if tournament.start_date <= date.today():
+        messages.error(request, "Cannot register teams after the tournament has already started.")
+        return redirect('tournament_detail', tournament_id=tournament.id)
 
     if request.method == 'POST':
         form = RegisterTeamForm(request.POST, tournament=tournament)
@@ -266,6 +288,10 @@ def edit_match_time(request, match_id):
 
     match = get_object_or_404(Match, id=match_id)
 
+    if match.match_date < date.today():
+        messages.error(request, "Cannot edit the time of a match that has already taken place.")
+        return redirect('tournament_detail', tournament_id=match.tournament.id)
+
     if request.method == 'POST':
         form = EditMatchTimeForm(request.POST, instance=match)
         if form.is_valid():
@@ -287,6 +313,10 @@ def update_match_venue(request, match_id):
         return HttpResponseForbidden("Only Club Managers can update match venues.")
 
     match = get_object_or_404(Match, id=match_id)
+
+    if match.match_date < date.today():
+        messages.error(request, "Cannot update the venue of a match that has already taken place.")
+        return redirect('tournament_detail', tournament_id=match.tournament.id)
 
     if request.method == 'POST':
         form = UpdateMatchVenueForm(request.POST, instance=match)
@@ -426,6 +456,10 @@ def generate_schedule(request, tournament_id):
     tournament = get_object_or_404(Tournament, id=tournament_id)
     teams = list(tournament.teams.all())
 
+    if tournament.end_date < date.today():
+        messages.error(request, "Cannot generate a schedule for a tournament that has already ended.")
+        return redirect('tournament_detail', tournament_id=tournament.id)
+
     if len(teams) < 2:
         messages.error(request, "At least 2 teams are required to generate a schedule.")
         return redirect('tournament_detail', tournament_id=tournament.id)
@@ -468,6 +502,13 @@ def update_match_score(request, match_id):
         return HttpResponseForbidden("Only coaches can enter match scores.")
 
     match = get_object_or_404(Match, id=match_id)
+
+    if match.home_team.coach != request.user and match.away_team.coach != request.user:
+        return HttpResponseForbidden("You can only enter scores for matches involving your team.")
+
+    if match.match_date > date.today():
+        messages.error(request, "Cannot enter a score for a match that has not started yet.")
+        return redirect('tournament_detail', tournament_id=match.tournament.id)
 
     if request.method == 'POST':
         form = MatchScoreForm(request.POST, instance=match)
