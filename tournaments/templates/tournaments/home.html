@@ -23,6 +23,7 @@
             {% for group in user.groups.all %}
                 {% if group.name == 'Club Manager' %}
                     <a class="btn btn-accent" href="/create/">Create Tournament</a>
+                    <a class = "btn btn-primary" href = "/announcements/send/">Send Announcement</a>
                 {% endif %}
             {% endfor %}
 

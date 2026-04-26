@@ -1,11 +1,12 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import User
 from django.http import HttpResponseForbidden
 from .forms import (
     TournamentForm, TeamForm, AssignCoachForm, AddPlayerForm,
     RegisterTeamForm, EditMatchTimeForm, UpdateMatchVenueForm,
     MatchScoreForm, AssignTaskForm, PlayerAvailabilityForm, AttendanceForm,
-    RegistrationForm, TeamMessageForm
+    RegistrationForm, TeamMessageForm, AnnouncementForm
 )
 from .models import Tournament, Team, TeamMembership, Match, Notification, PerformanceStat, Task, PlayerAvailability, Attendance, Announcement
 from django.forms import modelformset_factory
@@ -799,7 +800,7 @@ def send_team_message(request, team_id):
                     user_id = pid, 
                     message = f"New message from coach {request.user.username}: {announcement.title}" 
                 ) 
-                
+
             messages.success(request, "Message sent to team successfully.") 
 
             return redirect('team_detail', team_id = team.id) 
@@ -810,4 +811,44 @@ def send_team_message(request, team_id):
     return render(request, 'tournaments/send_team_message.html', {
         'form': form,
         'team': team,
+    })
+
+@login_required
+def send_announcement(request):
+    if not is_club_manager(request.user):
+        return HttpResponseForbidden("Only Club Managers can send system-wide announcements.")
+
+    if request.method == 'POST': 
+        form = AnnouncementForm(request.POST)
+        if form.is_valid(): 
+            announcement = form.save(commit = False)
+            announcement.sender = request.user
+            announcement.team = None
+            announcement.save() 
+
+            for user in User.objects.exclude(id=request.user.id):
+                Notification.objects.create( 
+                    user = user,
+                    message = f"System announcement: {announcement.title}" 
+                )
+
+            messages.success(request, "Announcement sent to all users.")
+
+            return redirect('team_announcements_all') 
+    else:
+        form = AnnouncementForm()
+
+    return render(request, 'tournaments/send_announcement.html', {
+        'form': form, 
+    })
+
+@login_required
+def team_announcements_all(request): 
+    if not is_club_manager(request.user): 
+        return HttpResponseForbidden("Only Club Managers can view all announcements.")
+
+    announcements = Announcement.objects.select_related('sender', 'team').all()
+
+    return render(request, 'tournaments/team_announcements_all.html', {
+        'announcements': announcements, 
     })

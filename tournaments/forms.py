@@ -192,3 +192,13 @@ class TeamMessageForm(forms.ModelForm):
             'title': forms.TextInput(attrs={'placeholder': 'Message title'}), 
             'body': forms.Textarea(attrs={'placeholder': 'Write your message...', 'rows': 4}),
         }
+
+class AnnouncementForm(forms.ModelForm):
+    class Meta:
+        model = Announcement
+        fields = ['title', 'body']
+        widgets = {
+            'title': forms.TextInput(attrs={'placeholder': 'Announcement title'}),
+            'body': forms.Textarea(attrs={'placeholder': 'Write your announcement...', 'rows': 4}),
+        }
+        

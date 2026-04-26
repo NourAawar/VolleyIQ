@@ -35,4 +35,6 @@ urlpatterns = [
     path('my-tasks/', views.my_tasks, name='my_tasks'),
 
     path('teams/<int:team_id>/send-message/', views.send_team_message, name = 'send_team_message'),
+    path('announcements/send/', views.send_announcement, name = 'send_announcement'),
+    path('announcements/', views.team_announcements_all, name = 'team_announcements_all'),
 ]

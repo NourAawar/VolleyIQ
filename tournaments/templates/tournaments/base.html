@@ -20,6 +20,9 @@
                     {% if group.name == 'Player' %}
                         <a href="/my-performance/">My Performance</a>
                     {% endif %}
+                    {% if group.name == 'Club Manager' %}
+                        <a href = "/announcements/">Announcements</a>
+                    {% endif %}
                 {% endfor %}
 
                 <form action="/accounts/logout/" method="post" style="display:inline;">
