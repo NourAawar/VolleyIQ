@@ -274,3 +274,48 @@ def advance_double_elimination(tournament):
             created = True
 
     return created
+
+def get_player_recommendations(team):
+    recommendations = {}
+
+    wins = team.wins
+    losses = team.losses
+    total_matches = wins + losses
+
+    for membership in team.memberships.select_related('player'):
+        player = membership.player
+        player_recs = []
+
+        name = player.get_full_name() or player.username
+
+        if total_matches == 0:
+            player_recs.append(
+                "Not enough match data yet to generate recommendations."
+            )
+            recommendations[name] = player_recs
+            continue
+
+        if losses > wins:
+            player_recs.append("Focus on improving consistency during high-pressure matches.")
+
+            if membership.position == "setter":
+                player_recs.append("Improve ball distribution and decision-making.")
+            elif membership.position == "libero":
+                player_recs.append("Work on defensive positioning and reaction speed.")
+            else:
+                player_recs.append("Improve attacking accuracy and timing.")
+
+        elif wins > losses:
+            player_recs.append("Maintain performance and refine advanced skills.")
+
+            if membership.position == "setter":
+                player_recs.append("Enhance quick play strategies.")
+            elif membership.position == "middle_blocker":
+                player_recs.append("Improve blocking timing and reading opponents.")
+
+        else:
+            player_recs.append("Focus on teamwork coordination and communication.")
+
+        recommendations[name] = player_recs
+
+    return recommendations
