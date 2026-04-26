@@ -40,4 +40,7 @@ urlpatterns = [
     path('teams/<int:team_id>/announcements/', views.team_announcements, name = 'team_announcements'),
 
     path('my-profile/', views.my_profile, name = 'my_profile'), 
+
+    path('notifications/mark-read/', views.mark_notifications_read, name = 'mark_notifications_read'), 
+    
 ]

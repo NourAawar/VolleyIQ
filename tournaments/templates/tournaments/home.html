@@ -235,9 +235,25 @@
 {# notifications section#}
 
 {% if user.is_authenticated %}
-<div class="card table-card" style="margin-top:24px;">
-    <h2>Recent Notifications</h2>
-    <p class="small-text">Latest updates related to your matches and tournaments.</p>
+<div class = "card table-card" style = "margin-top: 24px;">
+    <div style = "display:flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+        <div>
+            <h2 style = "margin: 0;">Recent Notifications</h2>
+            {% if unread_count > 0 %}
+                <span class = "badge" style = "background: #c0392b; color: #fff; margin-top: 4px; display: inline-block;">
+                    {{unread_count}} unread
+                </span>
+            {% endif %}
+        </div>
+        {% if unread_count > 0 %}
+            <form method = "post" action = "/notifications/mark-read/">
+                {% csrf_token %}
+                <button type = "submit" class = "btn btn-outline" style = "font-size: 0.85rem;">
+                    Mark all as read
+                </button>
+            </form>
+        {% endif %}
+    </div>
 
     {% if notifications %}
         <table>
@@ -249,10 +265,17 @@
             </thead>
             <tbody>
                 {% for notification in notifications %}
-                    <tr>
-                        <td>{{ notification.message }}</td>
-                        <td>{{ notification.created_at|date:"M d, Y - H:i" }}</td>
-                    </tr>
+                    {% if not notification.is_read %}
+                        <tr style="background: #fff8e1; font-weight: 600;">
+                            <td><span style = "color: #c0392b; margin-right: 6px;">●</span>{{notification.message}}</td>
+                            <td>{{notification.created_at|date:"M d, Y - H:i"}}</td>
+                        </tr>
+                    {% else %}
+                        <tr>
+                            <td>{{notification.message}}</td>
+                            <td>{{notification.created_at|date:"M d, Y - H:i"}}</td>
+                        </tr>
+                    {% endif %}
                 {% endfor %}
             </tbody>
         </table>

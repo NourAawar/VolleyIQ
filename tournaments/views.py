@@ -88,6 +88,8 @@ def home(request):
                 aces = Sum('aces'),
             )
 
+    unread_count = request.user.notifications.filter(is_read = False).count() if request.user.is_authenticated else 0
+
     return render(request, 'tournaments/home.html', { 
         'notifications': notifications,
         'player_teams': player_teams, 
@@ -97,6 +99,7 @@ def home(request):
         'pending_tournaments': pending_tournaments, 
         'next_match': next_match, 
         'stats_totals': stats_totals, 
+        'unread_count': unread_count, 
     })
 
 
@@ -966,3 +969,10 @@ def my_profile(request):
         'totals': totals, 
         'stats_count': stats.count(), 
     })
+
+@login_required
+def mark_notifications_read(request): 
+    if request.method == 'POST': 
+        request.user.notifications.filter(is_read = False).update(is_read = True) 
+        
+    return redirect('home')
