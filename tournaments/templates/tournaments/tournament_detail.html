@@ -66,7 +66,7 @@
             {% for team in registered_teams %}
                 <tr>
                     <td><a href="/teams/{{ team.id }}/">{{ team.name }}</a></td>
-                    <td>{{ team.coach.get_full_name|default:team.coach.username|default:"-" }}</td>
+                    <td>{% if team.coach %}{{ team.coach.get_full_name|default:team.coach.username }}{% else %}-{% endif %}</td>
                     <td>{{ team.memberships.count }}</td>
                     {% for group in user.groups.all %}
                         {% if group.name == 'Club Manager' %}
