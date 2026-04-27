@@ -187,9 +187,13 @@
                 <td>{{ team.wins }}</td>
                 <td>{{ team.losses }}</td>
                 <td><strong>{{ team.points }}</strong></td>
-                <td style="color:{% if team.point_diff > 0 %}#27ae60{% elif team.point_diff < 0 %}#c0392b{% else %}inherit{% endif %}">
-                    {% if team.point_diff > 0 %}+{% endif %}{{ team.point_diff }}
-                </td>
+                {% if team.point_diff > 0 %}
+                    <td style="color:#27ae60;">+{{ team.point_diff }}</td>
+                {% elif team.point_diff < 0 %}
+                    <td style="color:#c0392b;">{{ team.point_diff }}</td>
+                {% else %}
+                    <td>{{ team.point_diff }}</td>
+                {% endif %}
             </tr>
             {% empty %}
             <tr><td colspan="6">No teams registered yet.</td></tr>

@@ -63,7 +63,7 @@
                             {% endif %}
                         </td>
                         <td>{{m.jersey_number|default:"—"}}</td>
-                        <td>{{m.team.coach.get_full_name|default:m.team.coach.username|default:"—"}}</td>
+                        <td>{% if m.team.coach %}{{ m.team.coach.get_full_name|default:m.team.coach.username }}{% else %}—{% endif %}</td>
                     </tr>
                 {% endfor %}
             </tbody>

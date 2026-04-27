@@ -21,7 +21,7 @@
                     <td><strong>{{ team.name }}</strong></td>
                     <td>
                         {% if team.coach %}
-                            {{ team.coach.get_full_name|default:team.coach.username }}
+                            {% if team.coach %}{{ team.coach.get_full_name|default:team.coach.username }}{% else %}—{% endif %}
                         {% else %}
                             <span style="color:var(--muted)">No coach</span>
                         {% endif %}

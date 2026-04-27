@@ -27,7 +27,7 @@
                         {% endif %}
                     </td>
                     <td>{{ task.team.name }}</td>
-                    <td>{{ task.assigned_by.get_full_name|default:task.assigned_by.username|default:"—" }}</td>
+                    <td>{% if task.assigned_by %}{{ task.assigned_by.get_full_name|default:task.assigned_by.username }}{% else %}—{% endif %}</td>
                     <td>{{ task.due_date|default:"—" }}</td>
                     <td>
                         <form method="post" style="display:inline;">

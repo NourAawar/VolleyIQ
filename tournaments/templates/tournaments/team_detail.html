@@ -9,7 +9,7 @@
     <div class="role-box">
         <strong>Coach:</strong>
         {% if team.coach %}
-            {{ team.coach.get_full_name|default:team.coach.username }}
+            {% if team.coach %}{{ team.coach.get_full_name|default:team.coach.username }}{% else %}<span style="color:var(--muted)">No coach assigned yet</span>{% endif %}
         {% else %}
             <span style="color:var(--muted)">No coach assigned yet</span>
         {% endif %}
