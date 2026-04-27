@@ -49,4 +49,5 @@ urlpatterns = [
     path('notifications/<int:notification_id>/', views.notification_detail, name='notification_detail'),
 
     path('my-recommendations/', views.player_recommendations, name='player_recommendations'),
+    path('teams/<int:team_id>/insights/', views.coach_insights, name='coach_insights'),
 ]

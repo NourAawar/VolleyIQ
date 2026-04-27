@@ -1,6 +1,8 @@
 import math
 from datetime import timedelta, time as default_time
 from .models import Team, Match, Notification
+from django.db.models import Sum
+from .models import PerformanceStat
 
 
 def notify_match_coaches(match, message):
@@ -319,3 +321,71 @@ def get_player_recommendations(team):
         recommendations[name] = player_recs
 
     return recommendations
+
+from django.db.models import Sum
+from .models import PerformanceStat
+
+def get_coach_insights(team):
+    insights = {}
+
+    for membership in team.memberships.select_related('player'):
+        player = membership.player
+        stats = PerformanceStat.objects.filter(player=player)
+
+        data = stats.aggregate(
+            kills=Sum('kills'),
+            assists=Sum('assists'),
+            blocks=Sum('blocks'),
+            digs=Sum('digs'),
+            aces=Sum('aces'),
+            errors=Sum('errors'),
+        )
+
+        for k in data:
+            if data[k] is None:
+                data[k] = 0
+
+        player_insights = []
+
+        total_matches = stats.count()
+
+        if total_matches == 0:
+            player_insights.append("No matches played yet.")
+        else:
+            matches = total_matches if total_matches > 0 else 1
+
+            # Averages (more accurate than totals)
+            avg_kills = (data['kills'] or 0) / matches
+            avg_digs = (data['digs'] or 0) / matches
+            avg_errors = (data['errors'] or 0) / matches
+
+            # Attack insight
+            if avg_kills >= 5:
+                player_insights.append("Strong attacking performance.")
+            elif avg_kills >= 2:
+                player_insights.append("Decent attacking contribution.")
+            else:
+                player_insights.append("Low attacking output → needs improvement.")
+
+            # Defense insight
+            if avg_digs >= 4:
+                player_insights.append("Good defensive contribution.")
+
+            # Error insight (FIXED VERSION)
+            if avg_errors >= 3:
+                player_insights.append("High error rate → needs consistency training.")
+            elif avg_errors >= 1.5:
+                player_insights.append("Moderate error rate → needs improvement.")
+            else:
+                player_insights.append("Low error rate → solid consistency.")
+
+            # Overall balance
+            if (data['kills'] or 0) > (data['errors'] or 0):
+                player_insights.append("Positive overall impact.")
+
+        insights[player.username] = {
+            "name": player.get_full_name() or player.username,
+            "insights": player_insights
+        }
+
+    return insights
