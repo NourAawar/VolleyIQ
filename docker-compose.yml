@@ -1,0 +1,15 @@
+version: '3.9'
+
+services:
+  web:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+    environment:
+      - DEBUG=1
+    command: >
+      sh -c "python manage.py migrate &&
+             (python manage.py shell -c 'from django.contrib.auth.models import User; import sys; sys.exit(0 if User.objects.exists() else 1)' || python manage.py loaddata fixtures/initial_data.json) &&
+             python manage.py runserver 0.0.0.0:8000"

@@ -1,0 +1,149 @@
+[
+{
+  "model": "auth.group",
+  "fields": {
+    "name": "Club Manager",
+    "permissions": []
+  }
+},
+{
+  "model": "auth.group",
+  "fields": {
+    "name": "Coach",
+    "permissions": []
+  }
+},
+{
+  "model": "auth.group",
+  "fields": {
+    "name": "Player",
+    "permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$oN9o76Whd0WAxZFOUQ3hy5$QPJACEJHd0BahYOcwcavmBYnYahKbYnLJtLj3WyC3FM=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "manager1",
+    "first_name": "Club",
+    "last_name": "Manager",
+    "email": "",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-04-27T06:24:34.475Z",
+    "groups": [
+      [
+        "Club Manager"
+      ]
+    ],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$REIhylmYTbJfYCADypI3Ug$qrf9yfSwHEXcdoAqM1aw6sRaauqt1oV1Gz2EOW25C3Q=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "coach1",
+    "first_name": "Demo",
+    "last_name": "Coach",
+    "email": "",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-04-27T06:24:34.909Z",
+    "groups": [
+      [
+        "Coach"
+      ]
+    ],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$iVxUCRGOdQx0le4p6nkJUq$m91u2MIwn1GNspR1LzocFCol81Tsy1fCUu6datjdRoQ=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "MayaBechara",
+    "first_name": "Maya",
+    "last_name": "Bechara",
+    "email": "",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-04-27T06:24:35.394Z",
+    "groups": [
+      [
+        "Player"
+      ]
+    ],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$PV0AVkzDT6V1QykPhpphpg$9rTz3lEGRnJLVK9NH+NsfVFccHLBlBKOwkAe/PUk4nQ=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "JudyNajjar",
+    "first_name": "Judy",
+    "last_name": "Najjar",
+    "email": "",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-04-27T06:35:33.370Z",
+    "groups": [
+      [
+        "Player"
+      ]
+    ],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$iYn2dBY9ukfdp6sOcXbyjL$x4l2UU5fjh66kE3KvyOEO6q941ozv275OArFZUcgJhc=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "LamaKhalil",
+    "first_name": "Lama",
+    "last_name": "Khalil",
+    "email": "",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-04-27T06:36:59.696Z",
+    "groups": [
+      [
+        "Player"
+      ]
+    ],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$WvuTeNqB7KByJVV5XtGiR6$3wq9ESJpFTH5H+Z6u1Hj55VUJBHfoi5+jxdM7Cpmlew=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "RitaChams",
+    "first_name": "Rita",
+    "last_name": "Chams",
+    "email": "",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-04-27T06:37:00.081Z",
+    "groups": [
+      [
+        "Player"
+      ]
+    ],
+    "user_permissions": []
+  }
+}
+]

@@ -918,6 +918,7 @@ def send_team_message(request, team_id):
                 Notification.objects.create(
                     user_id=pid,
                     message=f"New message from coach {request.user.username}: {announcement.title}",
+                    announcement = announcement, 
                 )
 
             messages.success(request, "Message sent to team successfully.")
@@ -949,6 +950,7 @@ def send_announcement(request):
                 Notification.objects.create(
                     user=user,
                     message=f"System announcement: {announcement.title}",
+                    announcement = announcement, 
                 )
 
             messages.success(request, "Announcement sent to all users.")
