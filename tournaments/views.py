@@ -20,6 +20,7 @@ from datetime import timedelta, time, date
 from django.db import models
 from django.db.models import Sum, F
 from .utils import get_player_recommendations
+from .utils import get_coach_insights
 
 
 def is_coach(user):
@@ -1075,4 +1076,18 @@ def player_recommendations(request):
     return render(request, "tournaments/player_recommendations.html", {
         "recommendations": recommendations.get(player.username, []),
         "status": status
+    })
+
+@login_required
+def coach_insights(request, team_id):
+    team = get_object_or_404(Team, id=team_id)
+
+    if not is_coach(request.user) or team.coach != request.user:
+        return HttpResponseForbidden("Not allowed")
+
+    insights = get_coach_insights(team)
+
+    return render(request, "tournaments/coach_insights.html", {
+        "team": team,
+        "insights": insights
     })

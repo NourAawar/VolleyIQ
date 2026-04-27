@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Coach Insights</title>
+</head>
+<body>
+
+    <h2>Coach Insights - {{ team.name }}</h2>
+
+    {% if insights %}
+
+        {% for player, data in insights.items %}
+
+            <div style="margin-bottom: 20px; padding: 10px; border: 1px solid #ccc;">
+
+                <h3>{{ data.name }}</h3>
+
+                {% if data.insights %}
+
+                    <ul>
+                        {% for item in data.insights %}
+                            <li>{{ item }}</li>
+                        {% endfor %}
+                    </ul>
+
+                {% else %}
+                    <p>No insights available for this player.</p>
+                {% endif %}
+
+            </div>
+
+        {% endfor %}
+
+    {% else %}
+        <p>No team insights available.</p>
+    {% endif %}
+
+</body>
+</html>
