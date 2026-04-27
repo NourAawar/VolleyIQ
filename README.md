@@ -20,19 +20,19 @@ Demo users and all data are loaded automatically on first run. Running docker-co
 
 ________________________________________
 ## **Demo Accounts:**
-Role	Username	Password
+Role	                  Username	                    Password
 
-Club Manager	manager1	dummypassword1
+Club Manager	          manager1                     	dummypassword1
 
-Coach	coach1	dummypassword1
+Coach                  	coach1	                      dummypassword1
 
-Player	MayaBechara	dummypassword1
+Player	                MayaBechara                   dummypassword1
 
-Player	JudyNajjar	dummypassword1
+Player                	JudyNajjar	                  dummypassword1
 
-Player	LamaKhalil	dummypassword1
+Player                	LamaKhalil	                  dummypassword1
 
-Player	RitaChams	dummypassword1
+Player	                RitaChams	                    dummypassword1
 
 ________________________________________
 ## Roles & Access
